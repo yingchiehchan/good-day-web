@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.23</p>
+      <p class="app-version">版本 v2.24</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -54,7 +54,7 @@
           <label>日期<input id="solar-day" type="number" min="1" max="31" required></label>
         </fieldset>
         <label>時間<input id="solar-time" type="time" value="12:00"></label>
-        <button class="primary-button" type="submit">查看完整資料</button>
+        <button class="primary-button" type="submit">轉換並查看完整資料</button>
       </form>
 
       <form id="lunar-form" class="date-form" hidden>
@@ -109,6 +109,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260801-result-repeat" defer></script>
+  <script src="app.js?v=20260801-solar-button-label" defer></script>
 </body>
 </html>
