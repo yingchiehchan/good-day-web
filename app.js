@@ -229,9 +229,13 @@
     const endTone = () => { playTone(880, 0.12); playTone(660, 0.16, 120); };
     const submitVoice = (voice) => {
       if (!voice.pending) return;
+      voice.status.setAttribute('aria-live', 'off');
+      voice.status.textContent = '';
       if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
-      else fillGoodDayFromSpeech(voice.pending, false);
-      voice.status.textContent = '確認完成，正在查詢。結果已顯示在下方。';
+      else {
+        fillGoodDayFromSpeech(voice.pending, false);
+        window.setTimeout(() => document.querySelector('#good-day-result .result-heading')?.focus({ preventScroll: false }), 0);
+      }
       voice.confirm.hidden = true;
     };
     const retryVoice = (voice) => {
@@ -271,6 +275,7 @@
       if (recognition) { recognition.stop(); return; }
       activeVoice = voice;
       voice.pending = '';
+      voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
       voice.status.textContent = '正在聆聽，請說完後等待語音辨識完成。再次按下可停止。';
