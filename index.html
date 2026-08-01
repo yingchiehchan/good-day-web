@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.18</p>
+      <p class="app-version">版本 v2.19</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -24,6 +24,8 @@
   <main id="main-content" tabindex="-1">
     <section id="home-panel" class="panel" aria-labelledby="home-title" tabindex="-1">
       <h2 id="home-title" tabindex="-1">首頁</h2>
+      <button id="mic-setup-button" class="secondary-button" type="button">啟用麥克風</button>
+      <p id="mic-setup-status" role="status" aria-live="polite"></p>
       <div class="action-grid">
         <button class="action-card" data-go="lookup-panel">
           <span class="action-icon" aria-hidden="true">日</span>
@@ -107,6 +109,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260801-retry-speech" defer></script>
+  <script src="app.js?v=20260801-mic-setup" defer></script>
 </body>
 </html>

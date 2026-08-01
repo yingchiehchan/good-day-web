@@ -230,6 +230,28 @@
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }
+  function initMicrophoneSetup() {
+    const button = $('mic-setup-button');
+    const status = $('mic-setup-status');
+    if (!button || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      if (button) button.hidden = true;
+      return;
+    }
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      status.textContent = '';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+        button.textContent = '麥克風已啟用';
+        button.setAttribute('aria-label', '麥克風已啟用');
+        status.textContent = '';
+      } catch (_) {
+        button.disabled = false;
+        status.textContent = '麥克風未啟用';
+      }
+    });
+  }
   function initVoice() {
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Speech) return;
@@ -270,7 +292,8 @@
       voice.transcript.hidden = true;
       voice.pending = '';
       voice.status.textContent = '準備重新錄音。';
-      const restart = () => window.setTimeout(() => start(voice), 400);
+      voice.restarting = true;
+      const restart = () => window.setTimeout(() => start(voice), 800);
       if (recognition) {
         const previousEnd = recognition.onend;
         recognition.onend = () => {
@@ -296,7 +319,13 @@
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.maxAlternatives = 3;
-      recognition.onstart = () => { voice.status.textContent = ''; };
+      recognition.onstart = () => {
+        voice.status.textContent = '';
+        if (voice.restarting) {
+          voice.restarting = false;
+          window.setTimeout(() => voice.startButton.focus({ preventScroll: false }), 0);
+        }
+      };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
         voice.transcript.querySelector('span').textContent = text;
@@ -341,7 +370,7 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '' };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
@@ -383,7 +412,7 @@
   }
 
   document.addEventListener('click', (event) => { const button = event.target.closest('[data-go]'); if (button) navigate(button.dataset.go); });
-  populate(); initLookup(); initGoodDays(); initVoice();
+  populate(); initLookup(); initGoodDays(); initMicrophoneSetup(); initVoice();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   let deferred; window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); deferred = event; $('install-button').hidden = false; $('install-button').onclick = async () => { deferred.prompt(); deferred = null; $('install-button').hidden = true; }; });
   if (!lunarLoaded()) setTimeout(() => announce('農曆套件尚未載入；請確認網路連線後重新整理。'), 300);
