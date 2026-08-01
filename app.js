@@ -288,6 +288,7 @@
       if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
       else fillGoodDayFromSpeech(voice.pending, false);
       voice.confirm.hidden = true;
+      if (voice.repeatButton) voice.repeatButton.hidden = false;
     };
     const retryVoice = (voice) => {
       voice.confirm.hidden = true;
@@ -313,6 +314,7 @@
       activeVoice = voice;
       voice.pending = '';
       voice.succeeded = false;
+      if (voice.repeatButton) voice.repeatButton.hidden = true;
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
@@ -390,6 +392,15 @@
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
       voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
+      const repeatButton = document.createElement('button');
+      repeatButton.type = 'button';
+      repeatButton.className = 'secondary-button voice-repeat';
+      repeatButton.textContent = target === 'lookup' ? '再次語音查詢' : '再次語音找好日子';
+      repeatButton.setAttribute('aria-label', repeatButton.textContent);
+      repeatButton.hidden = true;
+      form.parentElement.appendChild(repeatButton);
+      repeatButton.addEventListener('click', () => start(voice));
+      voice.repeatButton = repeatButton;
       return voice;
     };
     const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
