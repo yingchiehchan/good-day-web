@@ -256,7 +256,6 @@
         } catch (_) { /* Some browsers block synthesized audio; visual and VoiceOver prompts remain. */ }
       }, delay);
     };
-    const startTone = () => { playTone(660, 0.12); playTone(880, 0.16, 120); };
     const endTone = () => { playTone(880, 0.12); playTone(660, 0.16, 120); };
     const submitVoice = (voice) => {
       if (!voice.pending) return;
@@ -280,25 +279,6 @@
         };
         try { recognition.abort(); } catch (_) { recognition.stop(); }
       } else restart();
-    };
-    const listenForConfirmation = (voice) => {
-      if (recognition) return;
-      voice.status.textContent = '等待確認';
-      voice.confirmVoice.disabled = true;
-      recognition = new Speech();
-      recognition.lang = 'zh-TW';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 3;
-      recognition.onresult = (event) => {
-        const answer = [...event.results].map((result) => result[0].transcript).join('');
-        if (/錯|不對|重來|重新/.test(answer)) retryVoice(voice);
-        else if (/對|正確|沒錯|是/.test(answer)) submitVoice(voice);
-        else voice.status.textContent = `我聽到的是「${answer}」。請回答「對」或「錯」。`;
-      };
-      recognition.onerror = () => { clearRecognitionTimer(); voice.status.textContent = '沒有聽清楚，請再按一次「用語音回答對或錯」，或直接選擇按鈕。'; };
-      recognition.onend = () => { clearRecognitionTimer(); recognition = null; voice.confirmVoice.disabled = false; };
-      try { recognition.start(); recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 6000); } catch (_) { clearRecognitionTimer(); recognition = null; voice.confirmVoice.disabled = false; voice.status.textContent = '語音確認目前無法啟動，請直接選擇「對」或「錯」。'; }
     };
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
@@ -359,14 +339,13 @@
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
-      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button><button type="button" class="secondary-button voice-confirm-voice">用語音回答對或錯</button></div>`;
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), confirmVoice: area.querySelector('.voice-confirm-voice'), retry: area.querySelector('.voice-retry'), pending: '' };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '' };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
       voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
-      voice.confirmVoice.addEventListener('click', () => listenForConfirmation(voice));
       return voice;
     };
     const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
