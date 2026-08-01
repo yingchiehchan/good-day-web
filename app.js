@@ -268,7 +268,6 @@
         else voice.status.textContent = `我聽到的是「${answer}」。請回答「對」或「錯」。`;
       };
       recognition.onerror = () => { clearRecognitionTimer(); voice.status.textContent = '沒有聽清楚，請再按一次「用語音回答對或錯」，或直接選擇按鈕。'; };
-      recognition.onspeechend = () => { if (recognition) recognition.stop(); };
       recognition.onend = () => { clearRecognitionTimer(); recognition = null; voice.confirmVoice.disabled = false; };
       try { recognition.start(); recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 6000); } catch (_) { clearRecognitionTimer(); recognition = null; voice.confirmVoice.disabled = false; voice.status.textContent = '語音確認目前無法啟動，請直接選擇「對」或「錯」。'; }
     };
@@ -279,17 +278,16 @@
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
-      voice.status.textContent = '正在聆聽';
+      voice.status.textContent = '';
       voice.startButton.textContent = '停止語音輸入';
-      voice.startButton.setAttribute('aria-label', '正在聆聽，點兩下停止語音輸入');
+      voice.startButton.setAttribute('aria-label', '停止語音輸入');
       voice.startButton.setAttribute('aria-pressed', 'true');
       recognition = new Speech();
       recognition.lang = 'zh-TW';
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.maxAlternatives = 3;
-      recognition.onstart = () => { startTone(); voice.status.textContent = '正在聆聽，請說出完整條件。'; };
-      recognition.onspeechend = () => { if (recognition) recognition.stop(); };
+      recognition.onstart = () => { startTone(); voice.status.textContent = ''; };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
         voice.transcript.querySelector('span').textContent = text;
