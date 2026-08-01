@@ -281,6 +281,7 @@
       voice.transcript.hidden = true;
       voice.status.textContent = '正在聆聽，請說完後等待語音辨識完成。再次按下可停止。';
       voice.startButton.textContent = '停止語音輸入';
+      voice.startButton.setAttribute('aria-label', '正在聆聽，點兩下停止語音輸入');
       voice.startButton.setAttribute('aria-pressed', 'true');
       recognition = new Speech();
       recognition.lang = 'zh-TW';
@@ -309,6 +310,7 @@
         clearRecognitionTimer();
         recognition = null;
         voice.startButton.textContent = '重新錄音';
+        voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
         if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束，請重新錄音。';
       };
