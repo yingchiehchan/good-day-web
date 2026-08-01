@@ -6,14 +6,14 @@
     ['moving', '搬家或入厝'], ['wedding', '結婚或登記'], ['opening', '開工或動土'], ['grandOpening', '開幕'],
     ['contract', '簽約'], ['installation', '安床'], ['travel', '出行或旅行'], ['medical', '就醫或手術'],
     ['business', '開市或交易'], ['renovation', '修繕或裝修'], ['burial', '安葬'], ['engagement', '訂婚'],
-    ['naming', '求子或命名'], ['worship', '祭祀'], ['custom', '自訂事項']
+    ['naming', '求子或命名'], ['worship', '祭祀']
   ];
   const weekdays = [['0', '星期日'], ['1', '星期一'], ['2', '星期二'], ['3', '星期三'], ['4', '星期四'], ['5', '星期五'], ['6', '星期六']];
   const keywords = {
     moving: ['入宅', '入厝', '移徙'], wedding: ['嫁娶', '結婚'], opening: ['開工', '動土', '修造'],
     grandOpening: ['開市', '開幕', '交易'], contract: ['立券', '交易', '簽約'], installation: ['安床'],
     travel: ['出行'], medical: ['求醫'], business: ['開市', '交易'], renovation: ['修造', '動土'],
-    burial: ['安葬'], engagement: ['納采', '訂婚'], naming: ['求嗣', '命名'], worship: ['祭祀'], custom: []
+    burial: ['安葬'], engagement: ['納采', '訂婚'], naming: ['求嗣', '命名'], worship: ['祭祀']
   };
   const lunarLoaded = () => typeof window.Solar !== 'undefined' && typeof window.Lunar !== 'undefined';
 
@@ -209,6 +209,11 @@
     if (!range) { $('good-day-result').innerHTML = '<div class="empty" role="alert">請選擇開始與結束日期。</div>'; return; }
     const [start, end] = range;
     const period = $('period').value, [hour] = period === 'morning' ? [10] : period === 'afternoon' ? [14] : [12], terms = keywords[event] || [], zodiac = $('zodiac').value.trim();
+    if (!terms.length) {
+      $('good-day-result').innerHTML = '<div class="empty" role="alert" tabindex="-1">這個事項目前沒有老黃曆對應規則，請選擇其他事項。</div>';
+      window.setTimeout(() => $('good-day-result').querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0);
+      return;
+    }
     const results = [];
     for (let date = new Date(start); date < end && results.length < 1827; date.setDate(date.getDate() + 1)) {
       if (wantedWeekdays.length && !wantedWeekdays.includes(date.getDay())) continue;
