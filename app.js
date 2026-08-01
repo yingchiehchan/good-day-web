@@ -315,8 +315,13 @@
         voice.status.textContent = '辨識完成';
         voice.pending = text;
         const confirmButton = voice.confirm.querySelector('.voice-confirm');
-        confirmButton.setAttribute('aria-label', `對，開始查詢。辨識內容：${text}`);
-        window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 0);
+        voice.transcript.setAttribute('tabindex', '-1');
+        voice.transcript.setAttribute('aria-label', `辨識內容：${text}`);
+        confirmButton.setAttribute('aria-label', '對，開始查詢');
+        window.setTimeout(() => {
+          voice.transcript.focus({ preventScroll: false });
+          window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 1500);
+        }, 0);
       };
       recognition.onerror = (event) => {
         clearRecognitionTimer();
