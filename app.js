@@ -275,6 +275,8 @@
       recognition = null;
       if (!oldRecognition) return;
       oldRecognition.onstart = null;
+      oldRecognition.onaudiostart = null;
+      oldRecognition.onsoundstart = null;
       oldRecognition.onresult = null;
       oldRecognition.onerror = null;
       oldRecognition.onnomatch = null;
@@ -323,7 +325,7 @@
       // recognizer. The old recognizer is no longer allowed to update the UI.
       window.setTimeout(() => start(voice), 500);
     };
-    const start = (voice) => {
+    const start = (voice, isRecovery = false) => {
       if (recognition) { recognition.stop(); return; }
       const cooldown = Math.max(0, 900 - (Date.now() - lastRecognitionEndedAt));
       if (cooldown) {
@@ -332,8 +334,10 @@
       }
       const session = ++voiceSession;
       activeVoice = voice;
+      if (!isRecovery) voice.recoveryCount = 0;
       voice.pending = '';
       voice.succeeded = false;
+      voice.heardSound = false;
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
@@ -350,6 +354,12 @@
         if (session !== voiceSession) return;
         voice.status.textContent = '';
         voice.restarting = false;
+      };
+      recognition.onaudiostart = () => {
+        if (session === voiceSession) voice.audioStarted = true;
+      };
+      recognition.onsoundstart = () => {
+        if (session === voiceSession) voice.heardSound = true;
       };
       recognition.onresult = (event) => {
         if (session !== voiceSession) return;
@@ -376,7 +386,7 @@
         clearRecognitionTimer();
         if (event.error === 'aborted' && voice.restarting) return;
         if (voice.succeeded || voice.pending) return;
-        const message = event.error === 'not-allowed' ? '沒有麥克風權限' : event.error === 'no-speech' ? '沒有辨識到語音' : event.error === 'network' ? '語音服務連線失敗' : '語音辨識失敗';
+        const message = event.error === 'not-allowed' ? '沒有麥克風權限' : event.error === 'no-speech' && !voice.heardSound ? '沒有收到麥克風聲音' : event.error === 'no-speech' ? '有收到聲音，但沒有辨識到語音' : event.error === 'network' ? '語音服務連線失敗' : '語音辨識失敗';
         voice.status.textContent = message;
         voice.confirm.hidden = true;
         voice.retry.hidden = false;
@@ -396,8 +406,15 @@
             voice.transcript.focus({ preventScroll: false });
             window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 1800);
           }, 0);
-        } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
+        } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = voice.heardSound ? '語音輸入已結束' : '沒有收到麥克風聲音，請重新按一次。';
       };
+      window.setTimeout(() => {
+        if (session !== voiceSession || voice.pending || voice.heardSound || voice.recoveryCount >= 1) return;
+        voice.recoveryCount += 1;
+        voice.status.textContent = '沒有收到麥克風聲音，正在重新啟動。';
+        invalidateRecognition();
+        window.setTimeout(() => start(voice, true), 650);
+      }, 3500);
       try {
         recognition.start();
         recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 20000);
@@ -409,7 +426,7 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false, heardSound: false, audioStarted: false, recoveryCount: 0 };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
