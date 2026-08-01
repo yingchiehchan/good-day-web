@@ -278,6 +278,7 @@
         } catch (_) { /* Some browsers block synthesized audio; visual and VoiceOver prompts remain. */ }
       }, delay);
     };
+    const readyTone = () => { playTone(660, 0.1); playTone(880, 0.12, 100); };
     const endTone = () => { playTone(880, 0.12); playTone(660, 0.16, 120); };
     const submitVoice = (voice) => {
       if (!voice.pending) return;
@@ -291,9 +292,12 @@
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
       voice.pending = '';
-      voice.status.textContent = '準備重新錄音。';
+      voice.status.textContent = '';
       voice.restarting = true;
-      const restart = () => window.setTimeout(() => start(voice), 800);
+      const restart = () => window.setTimeout(() => {
+        readyTone();
+        window.setTimeout(() => start(voice), 320);
+      }, 800);
       if (recognition) {
         const previousEnd = recognition.onend;
         recognition.onend = () => {
@@ -321,10 +325,7 @@
       recognition.maxAlternatives = 3;
       recognition.onstart = () => {
         voice.status.textContent = '';
-        if (voice.restarting) {
-          voice.restarting = false;
-          window.setTimeout(() => voice.startButton.focus({ preventScroll: false }), 0);
-        }
+        voice.restarting = false;
       };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
