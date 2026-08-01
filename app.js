@@ -254,7 +254,7 @@
     };
     const listenForConfirmation = (voice) => {
       if (recognition) return;
-      voice.status.textContent = '請回答「對」或「錯」。回答對會自動查詢，回答錯會重新錄音。';
+      voice.status.textContent = '等待確認';
       voice.confirmVoice.disabled = true;
       recognition = new Speech();
       recognition.lang = 'zh-TW';
@@ -279,7 +279,7 @@
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
-      voice.status.textContent = '正在聆聽，請說完後等待語音辨識完成。再次按下可停止。';
+      voice.status.textContent = '正在聆聽';
       voice.startButton.textContent = '停止語音輸入';
       voice.startButton.setAttribute('aria-label', '正在聆聽，點兩下停止語音輸入');
       voice.startButton.setAttribute('aria-pressed', 'true');
@@ -296,7 +296,7 @@
         voice.transcript.hidden = false;
         voice.confirm.hidden = false;
         endTone();
-        voice.status.textContent = '語音辨識完成。請回答「對」或「錯」，也可以直接選擇按鈕。';
+        voice.status.textContent = '辨識完成';
         voice.pending = text;
       };
       recognition.onerror = (event) => {
@@ -312,7 +312,7 @@
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束，請重新錄音。';
+        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
       };
       try {
         recognition.start();
@@ -323,7 +323,7 @@
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
-      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite">按下後會播放提示音，請說出完整條件；辨識完成後 VoiceOver 會提示你，請先按「用語音回答對或錯」，再回答「對」或「錯」。</p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button><button type="button" class="secondary-button voice-confirm-voice">用語音回答對或錯</button></div>`;
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button><button type="button" class="secondary-button voice-confirm-voice">用語音回答對或錯</button></div>`;
       form.prepend(area);
       const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), confirmVoice: area.querySelector('.voice-confirm-voice'), retry: area.querySelector('.voice-retry'), pending: '' };
       voice.startButton.addEventListener('click', () => start(voice));
