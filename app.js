@@ -38,13 +38,29 @@
 
   function parseTime(text) {
     const branch = { 子: 0, 丑: 2, 寅: 4, 卯: 6, 辰: 8, 巳: 10, 午: 12, 未: 14, 申: 16, 酉: 18, 戌: 20, 亥: 22 };
-    const corrections = [['有事', '酉時'], ['有時', '酉時'], ['有时', '酉時'], ['誠實', '辰時'], ['誠時', '辰時'], ['餵食', '未時'], ['喂食', '未時'], ['餵時', '未時']];
-    corrections.forEach(([from, to]) => { text = text.replaceAll(from, to); });
     const compactText = text.replace(/\s+/g, '');
+    const spokenBranches = {
+      子: ['子時', '子时', '紫時', '紫时'],
+      丑: ['丑時', '丑时', '醜時', '醜时'],
+      寅: ['寅時', '寅时', '銀時', '银时'],
+      卯: ['卯時', '卯时', '毛時', '毛时'],
+      辰: ['辰時', '辰时', '誠實', '诚实', '誠時', '诚时'],
+      巳: ['巳時', '巳时', '四時', '四时'],
+      午: ['午時', '午时', '五時', '五时'],
+      未: ['未時', '未时', '餵食', '喂食', '餵時', '喂时'],
+      申: ['申時', '申时', '身時', '身时'],
+      酉: ['酉時', '酉时', '有事', '有時', '有时'],
+      戌: ['戌時', '戌时', '需時', '需时', '徐時', '徐时'],
+      亥: ['亥時', '亥时', '海時', '海时', '還時', '还时']
+    };
     if (/(?:日|號|号)(?:50|五十)(?:時|时|點|点)?$/.test(compactText)) return [12, 0];
-    for (const [name, hour] of Object.entries(branch)) if (text.includes(`${name}時`) || text.includes(`${name}时`)) return [hour, 0];
+    for (const [name, hour] of Object.entries(branch)) if (spokenBranches[name].some((alias) => compactText.includes(alias))) return [hour, 0];
     const match = text.match(/(\d{1,2})\s*(?:點|时|時|:|：)\s*(\d{1,2})?/);
-    if (match) return [Math.min(23, Number(match[1])), Math.min(59, Number(match[2] || 0))];
+    if (match) {
+      let hour = Math.min(23, Number(match[1]));
+      if (/下午|午後/.test(text) && hour >= 1 && hour <= 11) hour += 12;
+      return [hour, Math.min(59, Number(match[2] || 0))];
+    }
     const fallback = text.match(/日\s*(?:50|五十)\s*$/);
     return fallback ? [12, 0] : [12, 0];
   }
