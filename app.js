@@ -265,7 +265,21 @@
     let recognition = null;
     let recognitionTimer = null;
     let activeVoice = null;
+    let voiceSession = 0;
     const clearRecognitionTimer = () => { if (recognitionTimer) { window.clearTimeout(recognitionTimer); recognitionTimer = null; } };
+    const invalidateRecognition = () => {
+      voiceSession += 1;
+      clearRecognitionTimer();
+      const oldRecognition = recognition;
+      recognition = null;
+      if (!oldRecognition) return;
+      oldRecognition.onstart = null;
+      oldRecognition.onresult = null;
+      oldRecognition.onerror = null;
+      oldRecognition.onnomatch = null;
+      oldRecognition.onend = null;
+      try { oldRecognition.abort(); } catch (_) { try { oldRecognition.stop(); } catch (_) {} }
+    };
     const playTone = (frequency, duration = 0.12, delay = 0) => {
       window.setTimeout(() => {
         try {
@@ -303,38 +317,20 @@
       voice.status.textContent = '';
       voice.succeeded = false;
       voice.restarting = true;
-      // Restart immediately from the user's retry click. Safari can reject a
-      // delayed SpeechRecognition.start() after the original user gesture.
-      const restart = () => start(voice);
-      if (recognition) {
-        const previousEnd = recognition.onend;
-        recognition.onend = () => {
-          if (previousEnd) previousEnd();
-          restart();
-        };
-        try { recognition.abort(); } catch (_) { recognition.stop(); }
-      } else restart();
+      invalidateRecognition();
+      // Let Safari release the previous audio session before creating a new
+      // recognizer. The old recognizer is no longer allowed to update the UI.
+      window.setTimeout(() => start(voice), 500);
     };
     const start = (voice) => {
-      if (recognition) {
-        if (activeVoice === voice && voice.recording) { recognition.stop(); return; }
-        const previousRecognition = recognition;
-        voice.restarting = true;
-        previousRecognition.onend = () => {
-          if (recognition === previousRecognition) recognition = null;
-          start(voice);
-        };
-        try { previousRecognition.abort(); } catch (_) { previousRecognition.stop(); }
-        return;
-      }
+      if (recognition) { recognition.stop(); return; }
+      const session = ++voiceSession;
       activeVoice = voice;
       voice.pending = '';
       voice.succeeded = false;
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
-      voice.transcript.innerHTML = '<strong>我聽到的是：</strong> <span></span>';
-      voice.transcript.removeAttribute('aria-label');
       voice.status.textContent = '';
       voice.startButton.textContent = '停止語音輸入';
       voice.startButton.setAttribute('aria-label', '停止語音輸入');
@@ -345,11 +341,12 @@
       recognition.interimResults = false;
       recognition.maxAlternatives = 3;
       recognition.onstart = () => {
+        if (session !== voiceSession) return;
         voice.status.textContent = '';
         voice.restarting = false;
-        voice.recording = true;
       };
       recognition.onresult = (event) => {
+        if (session !== voiceSession) return;
         const text = [...event.results].map((result) => result[0].transcript).join('');
         voice.transcript.textContent = `我聽到的是：${text}`;
         voice.transcript.hidden = false;
@@ -369,6 +366,7 @@
         confirmButton.setAttribute('aria-label', '對，開始查詢');
       };
       recognition.onerror = (event) => {
+        if (session !== voiceSession) return;
         clearRecognitionTimer();
         if (event.error === 'aborted' && voice.restarting) return;
         if (voice.succeeded || voice.pending) return;
@@ -377,26 +375,15 @@
         voice.confirm.hidden = true;
         voice.retry.hidden = false;
       };
-      recognition.onnomatch = () => { if (voice.succeeded || voice.pending) return; voice.status.textContent = '沒有辨識到文字'; voice.confirm.hidden = true; voice.retry.hidden = false; };
+      recognition.onnomatch = () => { if (session !== voiceSession || voice.succeeded || voice.pending) return; voice.status.textContent = '沒有辨識到文字'; voice.confirm.hidden = true; voice.retry.hidden = false; };
       recognition.onend = () => {
+        if (session !== voiceSession) return;
         clearRecognitionTimer();
-        voice.recording = false;
         recognition = null;
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (voice.pending) {
-          // Wait until recognition has really ended before moving focus. This
-          // prevents VoiceOver from announcing a checkbox while the user is
-          // still speaking and makes the confirmation step predictable.
-          const confirmButton = voice.confirm.querySelector('.voice-confirm');
-          const spokenText = voice.pending;
-          const focusDelay = Math.max(2500, Math.min(7000, spokenText.length * 180 + 1000));
-          window.setTimeout(() => {
-            voice.transcript.focus({ preventScroll: false });
-            window.setTimeout(() => confirmButton.focus({ preventScroll: false }), focusDelay);
-          }, 0);
-        } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
+        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
       };
       try {
         recognition.start();
@@ -409,7 +396,7 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, recording: false, succeeded: false };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
