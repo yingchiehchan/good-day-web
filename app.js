@@ -219,10 +219,14 @@
       results.push({ ...day, date: new Date(date), yi });
     }
     const area = $('good-day-result');
+    area.removeAttribute('aria-label');
+    area.removeAttribute('tabindex');
     if (!results.length) { area.innerHTML = '<div class="empty" role="alert" tabindex="-1">沒有符合條件的日期，請放寬日期、星期或生肖條件。</div>'; window.setTimeout(() => area.querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0); return; }
     const shown = results.slice(0, 30);
     area.innerHTML = `<h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
-    window.setTimeout(() => area.querySelector('.result-heading')?.focus({ preventScroll: false }), 0);
+    area.setAttribute('tabindex', '-1');
+    area.setAttribute('aria-label', area.textContent.replace(/\s+/g, ' ').trim());
+    window.setTimeout(() => area.focus({ preventScroll: false }), 0);
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }
