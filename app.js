@@ -287,7 +287,7 @@
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.maxAlternatives = 3;
-      recognition.onstart = () => { startTone(); voice.status.textContent = ''; };
+      recognition.onstart = () => { voice.status.textContent = ''; };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
         voice.transcript.querySelector('span').textContent = text;
@@ -299,11 +299,12 @@
       };
       recognition.onerror = (event) => {
         clearRecognitionTimer();
-        const message = event.error === 'not-allowed' ? '沒有麥克風權限，請在瀏覽器設定允許使用麥克風。' : event.error === 'no-speech' ? '沒有聽到聲音，請靠近麥克風後再試一次。' : '語音辨識失敗，請再試一次，或改用下方文字欄位輸入。';
+        const message = event.error === 'not-allowed' ? '沒有麥克風權限' : event.error === 'no-speech' ? '沒有辨識到語音' : event.error === 'network' ? '語音服務連線失敗' : '語音辨識失敗';
         voice.status.textContent = message;
         voice.confirm.hidden = true;
         voice.retry.hidden = false;
       };
+      recognition.onnomatch = () => { voice.status.textContent = '沒有辨識到文字'; voice.confirm.hidden = true; voice.retry.hidden = false; };
       recognition.onend = () => {
         clearRecognitionTimer();
         recognition = null;
