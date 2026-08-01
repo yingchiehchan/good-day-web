@@ -21,8 +21,8 @@
   </header>
 
   <main id="main-content" tabindex="-1">
-    <section id="home-panel" class="panel" aria-labelledby="home-title">
-      <h2 id="home-title">首頁</h2>
+    <section id="home-panel" class="panel" aria-labelledby="home-title" tabindex="-1">
+      <h2 id="home-title" tabindex="-1">首頁</h2>
       <p class="intro">查一天的完整資料，或找適合辦事的日期。</p>
       <div class="action-grid">
         <button class="action-card" data-go="lookup-panel">
@@ -40,8 +40,8 @@
       </div>
     </section>
 
-    <section id="lookup-panel" class="panel" aria-labelledby="lookup-title" hidden>
-      <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="lookup-title">日期查詢</h2></div>
+    <section id="lookup-panel" class="panel" aria-labelledby="lookup-title" tabindex="-1" hidden>
+      <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="lookup-title" tabindex="-1">日期查詢</h2></div>
       <div class="segmented" role="group" aria-label="選擇曆法">
         <button class="segment active" data-calendar="solar" aria-pressed="true">國曆</button>
         <button class="segment" data-calendar="lunar" aria-pressed="false">農曆</button>
@@ -72,8 +72,8 @@
       <div id="lookup-result" class="result-area" aria-live="polite"></div>
     </section>
 
-    <section id="good-day-panel" class="panel" aria-labelledby="good-day-title" hidden>
-      <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="good-day-title">尋找好日子</h2></div>
+    <section id="good-day-panel" class="panel" aria-labelledby="good-day-title" tabindex="-1" hidden>
+      <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="good-day-title" tabindex="-1">尋找好日子</h2></div>
       <p class="intro">選擇事項與條件，依老黃曆宜忌尋找日期。</p>
       <form id="good-day-form">
         <label>要做的事情<select id="event-type"></select></label>
@@ -91,7 +91,7 @@
       <div id="good-day-result" class="result-area" aria-live="polite"></div>
     </section>
 
-    <section id="about-panel" class="panel about-panel" aria-labelledby="about-title">
+    <section id="about-panel" class="panel about-panel" aria-labelledby="about-title" tabindex="-1" hidden>
       <h2 id="about-title">關於與授權</h2>
       <h3>重要提醒</h3>
       <p>本 App 提供傳統曆法與民俗文化參考，<br>不構成醫療、法律、財務或任何專業建議。<br>重要事項請諮詢合格專業人士。</p>
@@ -101,10 +101,11 @@
     </section>
   </main>
 
+  <div id="navigation-announcement" class="sr-only" role="status" aria-live="polite"></div>
   <nav class="tab-bar" aria-label="主要導覽">
-    <button class="tab active" data-go="home-panel" aria-current="page">首頁</button>
-    <button class="tab" data-go="lookup-panel">日曆</button>
-    <button class="tab" data-go="good-day-panel">擇日</button>
+    <button class="tab active" data-go="home-panel" aria-controls="home-panel" aria-current="page">首頁</button>
+    <button class="tab" data-go="lookup-panel" aria-controls="lookup-panel">日曆</button>
+    <button class="tab" data-go="good-day-panel" aria-controls="good-day-panel">擇日</button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>

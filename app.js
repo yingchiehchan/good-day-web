@@ -116,10 +116,13 @@
   }
 
   function navigate(id) {
-    document.querySelectorAll('main > section.panel').forEach((panel) => { if (panel.id !== 'about-title') panel.hidden = panel.id !== id; });
-    document.querySelectorAll('[data-go]').forEach((button) => button.classList.toggle('active', button.dataset.go === id && button.classList.contains('tab')));
+    document.querySelectorAll('main > section.panel').forEach((panel) => { panel.hidden = panel.id !== id; });
     document.querySelectorAll('.tab').forEach((button) => { const active = button.dataset.go === id; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
-    document.getElementById(id).focus({ preventScroll: true });
+    const panel = document.getElementById(id);
+    const heading = panel.querySelector('h2');
+    const announcement = $('navigation-announcement');
+    announcement.textContent = `${heading ? heading.textContent : '頁面'}，已開啟。`;
+    (heading || panel).focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }
 
@@ -176,13 +179,67 @@
   function initVoice() {
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Speech) return;
-    let recognition, target;
-    const start = (destination) => { target = destination; recognition = new Speech(); recognition.lang = 'zh-TW'; recognition.interimResults = false; recognition.onresult = (event) => { const text = event.results[0][0].transcript; if (target === 'lookup') fillLookupFromSpeech(text); else fillGoodDayFromSpeech(text); }; recognition.onerror = () => announce('語音辨識失敗，請改用 iPhone 鍵盤的聽寫功能或直接輸入文字。'); recognition.start(); };
-    const addButton = (parent, target, label) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary-button'; button.textContent = label; button.addEventListener('click', () => start(target)); $(parent).prepend(button); };
-    addButton('solar-form', 'lookup', '開始語音查詢'); addButton('lunar-form', 'lookup', '開始語音查詢'); addButton('good-day-form', 'good-day', '開始語音找好日子');
+    let recognition = null;
+    let activeVoice = null;
+    const start = (voice) => {
+      if (recognition) { recognition.stop(); return; }
+      activeVoice = voice;
+      voice.status.textContent = '正在聆聽，請說完後等待語音辨識完成。再次按下可停止。';
+      voice.startButton.textContent = '停止語音輸入';
+      voice.startButton.setAttribute('aria-pressed', 'true');
+      recognition = new Speech();
+      recognition.lang = 'zh-TW';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 3;
+      recognition.onstart = () => { voice.status.textContent = '正在聆聽，請說出完整條件。'; };
+      recognition.onresult = (event) => {
+        const text = [...event.results].map((result) => result[0].transcript).join('');
+        voice.transcript.querySelector('span').textContent = text;
+        voice.transcript.hidden = false;
+        voice.confirm.hidden = false;
+        voice.retry.hidden = true;
+        voice.status.textContent = '語音辨識完成。請確認「我聽到的是」內容，再按「開始查詢」。';
+        voice.pending = text;
+      };
+      recognition.onerror = (event) => {
+        const message = event.error === 'not-allowed' ? '沒有麥克風權限，請在瀏覽器設定允許使用麥克風。' : event.error === 'no-speech' ? '沒有聽到聲音，請靠近麥克風後再試一次。' : '語音辨識失敗，請再試一次，或改用下方文字欄位輸入。';
+        voice.status.textContent = message;
+        voice.confirm.hidden = true;
+        voice.retry.hidden = false;
+      };
+      recognition.onend = () => {
+        recognition = null;
+        voice.startButton.textContent = '重新錄音';
+        voice.startButton.setAttribute('aria-pressed', 'false');
+        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束。若有辨識內容，請按「開始查詢」。';
+      };
+      try { recognition.start(); } catch (_) { voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
+    };
+    const addButton = (parent, target, label) => {
+      const form = $(parent);
+      const area = document.createElement('div');
+      area.className = 'voice-area';
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite">按下後說出完整條件；辨識完成後，請再按「開始查詢」。</p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">開始查詢</button><button type="button" class="secondary-button voice-retry">重新錄音</button></div>`;
+      form.prepend(area);
+      const voice = { area, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '' };
+      voice.startButton.addEventListener('click', () => start(voice));
+      voice.retry.hidden = true;
+      voice.retry.addEventListener('click', () => { voice.confirm.hidden = true; voice.transcript.hidden = true; voice.pending = ''; start(voice); });
+      voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => {
+        if (!voice.pending) return;
+        if (target === 'lookup') fillLookupFromSpeech(voice.pending, form);
+        else fillGoodDayFromSpeech(voice.pending, false);
+        voice.status.textContent = '已送出查詢，結果已顯示在本頁下方。';
+        voice.confirm.hidden = true;
+      });
+      return voice;
+    };
+    const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
+    addButton('good-day-form', 'good-day', '開始語音找好日子');
   }
-  function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) return announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; if (query.lunar) $('lunar-roc').checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
-  function fillGoodDayFromSpeech(text) { if (text.includes('今年')) { const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/); if (monthMatch) { const names = { 一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12 }; const month = Number(monthMatch[1]) || names[monthMatch[1]]; const now = new Date(); const endYear = month === 12 ? now.getFullYear() + 1 : now.getFullYear(); const endMonth = month === 12 ? 1 : month + 1; $('range-type').value = 'custom'; $('custom-range').hidden = false; $('custom-start').value = `${now.getFullYear()}-${String(month).padStart(2, '0')}-01`; $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`; } } const found = events.find(([key, label]) => text.includes(label.split('／')[0])); if (found) $('event-type').value = found[0]; weekdays.forEach(([value, label]) => { const input = document.querySelector(`#weekday-options input[value="${value}"]`); if (input) input.checked = text.includes(label); }); if (text.includes('上午')) $('period').value = 'morning'; if (text.includes('下午')) $('period').value = 'afternoon'; searchGoodDays(); }
+  function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; if (query.lunar) $('lunar-roc').checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
+  function fillGoodDayFromSpeech(text, autoSubmit = true) { if (text.includes('今年')) { const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/); if (monthMatch) { const names = { 一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12 }; const month = Number(monthMatch[1]) || names[monthMatch[1]]; const now = new Date(); const endYear = month === 12 ? now.getFullYear() + 1 : now.getFullYear(); const endMonth = month === 12 ? 1 : month + 1; $('range-type').value = 'custom'; $('custom-range').hidden = false; $('custom-start').value = `${now.getFullYear()}-${String(month).padStart(2, '0')}-01`; $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`; } } const found = events.find(([key, label]) => text.includes(label.split('／')[0])); if (found) $('event-type').value = found[0]; weekdays.forEach(([value, label]) => { const input = document.querySelector(`#weekday-options input[value="${value}"]`); if (input) input.checked = text.includes(label); }); if (text.includes('上午')) $('period').value = 'morning'; if (text.includes('下午')) $('period').value = 'afternoon'; if (autoSubmit) searchGoodDays(); }
 
   document.addEventListener('click', (event) => { const button = event.target.closest('[data-go]'); if (button) navigate(button.dataset.go); });
   populate(); initLookup(); initGoodDays(); initVoice();
