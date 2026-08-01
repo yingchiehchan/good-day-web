@@ -1,0 +1,11 @@
+{
+  "name": "好日子｜擇日助手",
+  "short_name": "好日子",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#4f46e5",
+  "lang": "zh-Hant-TW",
+  "description": "國曆、農曆、干支、節氣與傳統老黃曆擇日助手。",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

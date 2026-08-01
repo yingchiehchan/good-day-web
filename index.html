@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="description" content="好日子：國曆、農曆、干支、節氣與傳統老黃曆擇日助手。">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <title>好日子｜擇日助手</title>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主要內容</a>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">傳統曆法參考工具</p>
+      <h1>好日子</h1>
+    </div>
+    <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section id="home-panel" class="panel" aria-labelledby="home-title">
+      <h2 id="home-title">首頁</h2>
+      <p class="intro">查一天的完整資料，或找適合辦事的日期。</p>
+      <div class="action-grid">
+        <button class="action-card" data-go="lookup-panel">
+          <span class="action-icon" aria-hidden="true">日</span>
+          <span><strong>查詢國曆／農曆</strong><small>日期、四柱、節氣、宜忌與相沖</small></span>
+        </button>
+        <button class="action-card" data-go="good-day-panel">
+          <span class="action-icon" aria-hidden="true">好</span>
+          <span><strong>尋找好日子</strong><small>依事項與日期範圍篩選老黃曆宜日</small></span>
+        </button>
+      </div>
+      <div class="notice-card" role="note">
+        <strong>使用方式</strong>
+        <p>在 iPhone Safari 開啟後，選擇分享 → 加入主畫面。VoiceOver 可直接朗讀網頁內容。</p>
+      </div>
+    </section>
+
+    <section id="lookup-panel" class="panel" aria-labelledby="lookup-title" hidden>
+      <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="lookup-title">日期查詢</h2></div>
+      <div class="segmented" role="group" aria-label="選擇曆法">
+        <button class="segment active" data-calendar="solar" aria-pressed="true">國曆</button>
+        <button class="segment" data-calendar="lunar" aria-pressed="false">農曆</button>
+      </div>
+
+      <form id="solar-form" class="date-form">
+        <fieldset><legend>國曆日期</legend>
+          <label>年份<input id="solar-year" type="number" min="1900" max="2100" required></label>
+          <label>月份<input id="solar-month" type="number" min="1" max="12" required></label>
+          <label>日期<input id="solar-day" type="number" min="1" max="31" required></label>
+        </fieldset>
+        <label>時間<input id="solar-time" type="time" value="12:00"></label>
+        <button class="primary-button" type="submit">查看完整資料</button>
+      </form>
+
+      <form id="lunar-form" class="date-form" hidden>
+        <fieldset><legend>農曆日期</legend>
+          <label>民國／西元年份<input id="lunar-year" type="number" min="1900" max="2100" required></label>
+          <p class="help-text">請輸入西元年，例如 2026；也可在下方勾選民國年份。</p>
+          <label class="check-label"><input id="lunar-roc" type="checkbox"> 這是民國年份</label>
+          <label>月份<input id="lunar-month" type="number" min="1" max="12" required></label>
+          <label>日期<input id="lunar-day" type="number" min="1" max="30" required></label>
+          <label class="check-label"><input id="lunar-leap" type="checkbox"> 閏月</label>
+        </fieldset>
+        <label>時間<input id="lunar-time" type="time" value="12:00"></label>
+        <button class="primary-button" type="submit">轉換並查看完整資料</button>
+      </form>
+      <div id="lookup-result" class="result-area" aria-live="polite"></div>
+    </section>
+
+    <section id="good-day-panel" class="panel" aria-labelledby="good-day-title" hidden>
+      <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="good-day-title">尋找好日子</h2></div>
+      <p class="intro">選擇事項與條件，依老黃曆宜忌尋找日期。</p>
+      <form id="good-day-form">
+        <label>要做的事情<select id="event-type"></select></label>
+        <label>日期範圍<select id="range-type">
+          <option value="next7">未來七天</option><option value="month">本月</option><option value="nextMonth">下個月</option>
+          <option value="twoYears">未來兩年</option><option value="fiveYears">未來五年</option><option value="custom">自訂範圍</option>
+        </select></label>
+        <div id="custom-range" class="date-form" hidden><label>開始日期<input id="custom-start" type="date"></label><label>結束日期<input id="custom-end" type="date"></label></div>
+        <fieldset><legend>星期條件（可複選）</legend><div id="weekday-options" class="checkbox-grid"></div></fieldset>
+        <label>時段<select id="period"><option value="any">不限</option><option value="morning">上午</option><option value="afternoon">下午</option></select></label>
+        <label>避開生肖（可留白）<input id="zodiac" placeholder="例如：虎"></label>
+        <label class="check-label"><input id="avoid-clash" type="checkbox" checked> 避開相沖</label>
+        <button class="primary-button" type="submit">搜尋好日子</button>
+      </form>
+      <div id="good-day-result" class="result-area" aria-live="polite"></div>
+    </section>
+
+    <section id="about-panel" class="panel about-panel" aria-labelledby="about-title">
+      <h2 id="about-title">關於與授權</h2>
+      <h3>重要提醒</h3>
+      <p>本 App 提供傳統曆法與民俗文化參考，<br>不構成醫療、法律、財務或任何專業建議。<br>重要事項請諮詢合格專業人士。</p>
+      <h3>第三方套件</h3>
+      <p>本 App 使用 lunar-javascript。<br>Copyright (c) 2023 6tail<br>Licensed under the MIT License.</p>
+      <p class="source-note">資料計算：lunar-javascript（MIT）。本網站不使用帳號，也不會把語音內容上傳到自有伺服器。</p>
+    </section>
+  </main>
+
+  <nav class="tab-bar" aria-label="主要導覽">
+    <button class="tab active" data-go="home-panel" aria-current="page">首頁</button>
+    <button class="tab" data-go="lookup-panel">日曆</button>
+    <button class="tab" data-go="good-day-panel">擇日</button>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
