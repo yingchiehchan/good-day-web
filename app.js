@@ -206,7 +206,9 @@
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Speech) return;
     let recognition = null;
+    let recognitionTimer = null;
     let activeVoice = null;
+    const clearRecognitionTimer = () => { if (recognitionTimer) { window.clearTimeout(recognitionTimer); recognitionTimer = null; } };
     const playTone = (frequency, duration = 0.12, delay = 0) => {
       window.setTimeout(() => {
         try {
@@ -265,9 +267,10 @@
         else if (/對|正確|沒錯|是/.test(answer)) submitVoice(voice);
         else voice.status.textContent = `我聽到的是「${answer}」。請回答「對」或「錯」。`;
       };
-      recognition.onerror = () => { voice.status.textContent = '沒有聽清楚，請再按一次「用語音回答對或錯」，或直接選擇按鈕。'; };
-      recognition.onend = () => { recognition = null; voice.confirmVoice.disabled = false; };
-      try { recognition.start(); } catch (_) { recognition = null; voice.confirmVoice.disabled = false; voice.status.textContent = '語音確認目前無法啟動，請直接選擇「對」或「錯」。'; }
+      recognition.onerror = () => { clearRecognitionTimer(); voice.status.textContent = '沒有聽清楚，請再按一次「用語音回答對或錯」，或直接選擇按鈕。'; };
+      recognition.onspeechend = () => { if (recognition) recognition.stop(); };
+      recognition.onend = () => { clearRecognitionTimer(); recognition = null; voice.confirmVoice.disabled = false; };
+      try { recognition.start(); recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 6000); } catch (_) { clearRecognitionTimer(); recognition = null; voice.confirmVoice.disabled = false; voice.status.textContent = '語音確認目前無法啟動，請直接選擇「對」或「錯」。'; }
     };
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
@@ -285,6 +288,7 @@
       recognition.interimResults = false;
       recognition.maxAlternatives = 3;
       recognition.onstart = () => { startTone(); voice.status.textContent = '正在聆聽，請說出完整條件。'; };
+      recognition.onspeechend = () => { if (recognition) recognition.stop(); };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
         voice.transcript.querySelector('span').textContent = text;
@@ -295,18 +299,23 @@
         voice.pending = text;
       };
       recognition.onerror = (event) => {
+        clearRecognitionTimer();
         const message = event.error === 'not-allowed' ? '沒有麥克風權限，請在瀏覽器設定允許使用麥克風。' : event.error === 'no-speech' ? '沒有聽到聲音，請靠近麥克風後再試一次。' : '語音辨識失敗，請再試一次，或改用下方文字欄位輸入。';
         voice.status.textContent = message;
         voice.confirm.hidden = true;
         voice.retry.hidden = false;
       };
       recognition.onend = () => {
+        clearRecognitionTimer();
         recognition = null;
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-pressed', 'false');
         if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束，請重新錄音。';
       };
-      try { recognition.start(); } catch (_) { voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
+      try {
+        recognition.start();
+        recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 20000);
+      } catch (_) { clearRecognitionTimer(); voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
     };
     const addButton = (parent, target, label) => {
       const form = $(parent);
@@ -348,7 +357,8 @@
       ['3', ['星期三', '週三', '周三', '禮拜三']], ['4', ['星期四', '週四', '周四', '禮拜四']], ['5', ['星期五', '週五', '周五', '禮拜五']],
       ['6', ['星期六', '週六', '周六', '禮拜六']]
     ];
-    const requestedWeekdays = weekdayAliases.filter(([, aliases]) => aliases.some((alias) => text.includes(alias))).map(([value]) => value);
+    const isWeekend = /週末|周末|星期六日|星期日六|六日/.test(text);
+    const requestedWeekdays = isWeekend ? ['5', '6'] : weekdayAliases.filter(([, aliases]) => aliases.some((alias) => text.includes(alias))).map(([value]) => value);
     if (requestedWeekdays.length) document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = requestedWeekdays.includes(input.value); });
     if (text.includes('上午')) $('period').value = 'morning';
     if (text.includes('下午')) $('period').value = 'afternoon';
