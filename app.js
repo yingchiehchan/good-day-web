@@ -228,10 +228,12 @@
     area.removeAttribute('tabindex');
     if (!results.length) { area.innerHTML = '<div class="empty" role="alert" tabindex="-1">沒有符合條件的日期，請放寬日期、星期或生肖條件。</div>'; window.setTimeout(() => area.querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0); return; }
     const shown = results.slice(0, 30);
-    area.innerHTML = `<h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
+    const spokenResults = shown.slice(0, 5).map((day, index) => `第${index + 1}個，${calendar.format(day.date)}，老黃曆宜：${day.yi.join('、')}`).join('。');
+    const spokenSummary = `找到 ${results.length} 個符合條件的日期。先播報前五個：${spokenResults}`;
+    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1" role="status" aria-label="${escapeHtml(spokenSummary)}">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
     area.setAttribute('tabindex', '-1');
     area.setAttribute('aria-label', area.textContent.replace(/\s+/g, ' ').trim());
-    window.setTimeout(() => area.focus({ preventScroll: false }), 0);
+    window.setTimeout(() => area.querySelector('.result-summary')?.focus({ preventScroll: false }), 0);
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }
@@ -314,13 +316,25 @@
       } else restart();
     };
     const start = (voice) => {
-      if (recognition) { recognition.stop(); return; }
+      if (recognition) {
+        if (activeVoice === voice && voice.recording) { recognition.stop(); return; }
+        const previousRecognition = recognition;
+        voice.restarting = true;
+        previousRecognition.onend = () => {
+          if (recognition === previousRecognition) recognition = null;
+          start(voice);
+        };
+        try { previousRecognition.abort(); } catch (_) { previousRecognition.stop(); }
+        return;
+      }
       activeVoice = voice;
       voice.pending = '';
       voice.succeeded = false;
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
+      voice.transcript.innerHTML = '<strong>我聽到的是：</strong> <span></span>';
+      voice.transcript.removeAttribute('aria-label');
       voice.status.textContent = '';
       voice.startButton.textContent = '停止語音輸入';
       voice.startButton.setAttribute('aria-label', '停止語音輸入');
@@ -333,10 +347,11 @@
       recognition.onstart = () => {
         voice.status.textContent = '';
         voice.restarting = false;
+        voice.recording = true;
       };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
-        voice.transcript.querySelector('span').textContent = text;
+        voice.transcript.textContent = `我聽到的是：${text}`;
         voice.transcript.hidden = false;
         voice.confirm.hidden = false;
         endTone();
@@ -350,7 +365,7 @@
         voice.transcript.setAttribute('role', 'status');
         voice.transcript.setAttribute('aria-live', 'assertive');
         voice.transcript.setAttribute('aria-atomic', 'true');
-        voice.transcript.removeAttribute('aria-label');
+        voice.transcript.setAttribute('aria-label', `我聽到的是：${text}`);
         confirmButton.setAttribute('aria-label', '對，開始查詢');
       };
       recognition.onerror = (event) => {
@@ -365,6 +380,7 @@
       recognition.onnomatch = () => { if (voice.succeeded || voice.pending) return; voice.status.textContent = '沒有辨識到文字'; voice.confirm.hidden = true; voice.retry.hidden = false; };
       recognition.onend = () => {
         clearRecognitionTimer();
+        voice.recording = false;
         recognition = null;
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
@@ -393,7 +409,7 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, recording: false, succeeded: false };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
