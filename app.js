@@ -114,7 +114,14 @@
 
   function renderDay(day) {
     const list = (items) => items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<p>無資料</p>';
-    return `<article class="result-card" tabindex="0"><h3>查詢結果</h3><dl><dt>國曆</dt><dd>${escapeHtml(day.solarText)}</dd><dt>農曆</dt><dd>${escapeHtml(day.lunarText)}</dd><dt>星期</dt><dd>${escapeHtml(day.weekday)}</dd><dt>生肖</dt><dd>${escapeHtml(day.zodiac)}</dd><dt>年柱</dt><dd>${escapeHtml(day.yearGanZhi)}</dd><dt>月柱</dt><dd>${escapeHtml(day.monthGanZhi)}</dd><dt>日柱</dt><dd>${escapeHtml(day.dayGanZhi)}</dd><dt>時柱</dt><dd>${escapeHtml(day.timeGanZhi)}</dd><dt>目前節氣</dt><dd>${escapeHtml(day.term)}</dd><dt>前一個節氣</dt><dd>${escapeHtml(day.prevTerm)}</dd><dt>下一個節氣</dt><dd>${escapeHtml(day.nextTerm)}</dd><dt>相沖生肖</dt><dd>${escapeHtml(day.clash)}</dd></dl></article>`;
+    return `<article class="result-card" tabindex="0"><h3 tabindex="-1">查詢結果</h3><dl><dt>國曆</dt><dd>${escapeHtml(day.solarText)}</dd><dt>農曆</dt><dd>${escapeHtml(day.lunarText)}</dd><dt>星期</dt><dd>${escapeHtml(day.weekday)}</dd><dt>生肖</dt><dd>${escapeHtml(day.zodiac)}</dd><dt>年柱</dt><dd>${escapeHtml(day.yearGanZhi)}</dd><dt>月柱</dt><dd>${escapeHtml(day.monthGanZhi)}</dd><dt>日柱</dt><dd>${escapeHtml(day.dayGanZhi)}</dd><dt>時柱</dt><dd>${escapeHtml(day.timeGanZhi)}</dd><dt>目前節氣</dt><dd>${escapeHtml(day.term)}</dd><dt>前一個節氣</dt><dd>${escapeHtml(day.prevTerm)}</dd><dt>下一個節氣</dt><dd>${escapeHtml(day.nextTerm)}</dd><dt>相沖生肖</dt><dd>${escapeHtml(day.clash)}</dd></dl></article>`;
+  }
+
+  function showLookupResult(html) {
+    const area = $('lookup-result');
+    area.innerHTML = html;
+    const heading = area.querySelector('h3');
+    if (heading) window.setTimeout(() => heading.focus({ preventScroll: false }), 0);
   }
 
   function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
@@ -145,8 +152,8 @@
       document.querySelectorAll('[data-calendar]').forEach((b) => { b.classList.toggle('active', b === button); b.setAttribute('aria-pressed', b === button ? 'true' : 'false'); });
       $('solar-form').hidden = lunar; $('lunar-form').hidden = !lunar; $('lookup-result').innerHTML = '';
     }));
-    $('solar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('solar-time').value.split(':').map(Number); const solar = Solar.fromYmdHms(Number($('solar-year').value), Number($('solar-month').value), Number($('solar-day').value), hour, minute, 0); $('lookup-result').innerHTML = renderDay(makeDay(solar)); });
-    $('lunar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('lunar-time').value.split(':').map(Number); const yearInput = Number($('lunar-year').value); const query = { year: $('lunar-roc').checked ? yearInput + 1911 : yearInput, month: Number($('lunar-month').value), day: Number($('lunar-day').value), hour, minute }; try { $('lookup-result').innerHTML = renderDay(makeDay(solarFromLunar(query))); } catch (error) { announce('無法轉換這個農曆日期，請檢查日期或閏月設定。'); } });
+    $('solar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('solar-time').value.split(':').map(Number); const solar = Solar.fromYmdHms(Number($('solar-year').value), Number($('solar-month').value), Number($('solar-day').value), hour, minute, 0); showLookupResult(renderDay(makeDay(solar))); });
+    $('lunar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('lunar-time').value.split(':').map(Number); const yearInput = Number($('lunar-year').value); const query = { year: $('lunar-roc').checked ? yearInput + 1911 : yearInput, month: Number($('lunar-month').value), day: Number($('lunar-day').value), hour, minute }; try { showLookupResult(renderDay(makeDay(solarFromLunar(query)))); } catch (error) { announce('無法轉換這個農曆日期，請檢查日期或閏月設定。'); } });
   }
 
   function rangeDates(type) {
