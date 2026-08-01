@@ -138,14 +138,20 @@
 
   function renderDay(day) {
     const list = (items) => items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<p>無資料</p>';
-    return `<article class="result-card" tabindex="0"><h3 tabindex="-1">查詢結果</h3><dl><dt>國曆</dt><dd>${escapeHtml(day.solarText)}</dd><dt>農曆</dt><dd>${escapeHtml(day.lunarText)}</dd><dt>星期</dt><dd>${escapeHtml(day.weekday)}</dd><dt>生肖</dt><dd>${escapeHtml(day.zodiac)}</dd><dt>年柱</dt><dd>${escapeHtml(day.yearGanZhi)}</dd><dt>月柱</dt><dd>${escapeHtml(day.monthGanZhi)}</dd><dt>日柱</dt><dd>${escapeHtml(day.dayGanZhi)}</dd><dt>時柱</dt><dd>${escapeHtml(day.timeGanZhi)}</dd><dt>目前節氣</dt><dd>${escapeHtml(day.term)}</dd><dt>前一個節氣</dt><dd>${escapeHtml(day.prevTerm)}</dd><dt>下一個節氣</dt><dd>${escapeHtml(day.nextTerm)}</dd><dt>相沖生肖</dt><dd>${escapeHtml(day.clash)}</dd></dl></article>`;
+    return `<article class="result-card" tabindex="-1"><h3 tabindex="-1">查詢結果</h3><dl><dt>國曆</dt><dd>${escapeHtml(day.solarText)}</dd><dt>農曆</dt><dd>${escapeHtml(day.lunarText)}</dd><dt>星期</dt><dd>${escapeHtml(day.weekday)}</dd><dt>生肖</dt><dd>${escapeHtml(day.zodiac)}</dd><dt>年柱</dt><dd>${escapeHtml(day.yearGanZhi)}</dd><dt>月柱</dt><dd>${escapeHtml(day.monthGanZhi)}</dd><dt>日柱</dt><dd>${escapeHtml(day.dayGanZhi)}</dd><dt>時柱</dt><dd>${escapeHtml(day.timeGanZhi)}</dd><dt>目前節氣</dt><dd>${escapeHtml(day.term)}</dd><dt>前一個節氣</dt><dd>${escapeHtml(day.prevTerm)}</dd><dt>下一個節氣</dt><dd>${escapeHtml(day.nextTerm)}</dd><dt>相沖生肖</dt><dd>${escapeHtml(day.clash)}</dd></dl></article>`;
   }
 
   function showLookupResult(html) {
     const area = $('lookup-result');
     area.innerHTML = html;
-    const heading = area.querySelector('h3');
-    if (heading) window.setTimeout(() => heading.focus({ preventScroll: false }), 0);
+    const article = area.querySelector('article');
+    if (article) {
+      article.setAttribute('aria-label', article.textContent.replace(/\s+/g, ' ').trim());
+      window.setTimeout(() => article.focus({ preventScroll: false }), 0);
+    } else {
+      const heading = area.querySelector('h3');
+      if (heading) window.setTimeout(() => heading.focus({ preventScroll: false }), 0);
+    }
   }
 
   function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
