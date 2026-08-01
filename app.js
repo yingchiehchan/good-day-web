@@ -323,7 +323,7 @@
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
-      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite">按下後會播放提示音，請說出完整條件；辨識完成後請回答「對」或「錯」。</p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button><button type="button" class="secondary-button voice-confirm-voice">用語音回答對或錯</button></div>`;
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite">按下後會播放提示音，請說出完整條件；辨識完成後 VoiceOver 會提示你，請先按「用語音回答對或錯」，再回答「對」或「錯」。</p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button><button type="button" class="secondary-button voice-confirm-voice">用語音回答對或錯</button></div>`;
       form.prepend(area);
       const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), confirmVoice: area.querySelector('.voice-confirm-voice'), retry: area.querySelector('.voice-retry'), pending: '' };
       voice.startButton.addEventListener('click', () => start(voice));
