@@ -3,10 +3,10 @@
   const $ = (id) => document.getElementById(id);
   const calendar = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', timeZone: 'Asia/Taipei' });
   const events = [
-    ['moving', '搬家／入厝'], ['wedding', '結婚／登記'], ['opening', '開工／動土'], ['grandOpening', '開幕'],
-    ['contract', '簽約'], ['installation', '安床'], ['travel', '出行／旅行'], ['medical', '就醫／手術'],
-    ['business', '開市／交易'], ['renovation', '修繕／裝修'], ['burial', '安葬'], ['engagement', '訂婚'],
-    ['naming', '求子／命名'], ['worship', '祭祀'], ['custom', '自訂事項']
+    ['moving', '搬家或入厝'], ['wedding', '結婚或登記'], ['opening', '開工或動土'], ['grandOpening', '開幕'],
+    ['contract', '簽約'], ['installation', '安床'], ['travel', '出行或旅行'], ['medical', '就醫或手術'],
+    ['business', '開市或交易'], ['renovation', '修繕或裝修'], ['burial', '安葬'], ['engagement', '訂婚'],
+    ['naming', '求子或命名'], ['worship', '祭祀'], ['custom', '自訂事項']
   ];
   const weekdays = [['0', '星期日'], ['1', '星期一'], ['2', '星期二'], ['3', '星期三'], ['4', '星期四'], ['5', '星期五'], ['6', '星期六']];
   const keywords = {
@@ -20,7 +20,7 @@
   function traditional(value) {
     if (value === undefined || value === null) return '資料不足';
     let text = String(value);
-    const map = [['入宅', '入厝／入宅'], ['移徙', '搬家／移徙'], ['嫁娶', '結婚／嫁娶'], ['開市', '開市／開幕'], ['立券', '簽約／立券'], ['修造', '修繕／修造'], ['出行', '出門／出行'], ['求醫', '就醫／求醫'], ['求嗣', '求子／求嗣'], ['納采', '訂婚／納采'], ['雞', '雞'], ['龍', '龍']];
+    const map = [['入宅', '入厝、入宅'], ['移徙', '搬家、移徙'], ['嫁娶', '結婚、嫁娶'], ['開市', '開市、開幕'], ['立券', '簽約、立券'], ['修造', '修繕、修造'], ['出行', '出門、出行'], ['求醫', '就醫、求醫'], ['求嗣', '求子、求嗣'], ['納采', '訂婚、納采'], ['雞', '雞'], ['龍', '龍']];
     map.forEach(([from, to]) => { text = text.split(from).join(to); });
     const simplifiedToTraditional = { 馬: '馬', 龙: '龍', 马: '馬', 鸡: '雞', 盖: '蓋', 竖: '豎', 车: '車', 农: '農', 历: '曆', 阳: '陽', 阴: '陰', 节: '節', 气: '氣', 岁: '歲', 时: '時', 间: '間', 点: '點', 国: '國', 问: '問', 听: '聽', 说: '說', 对: '對', 错: '錯', 这: '這', 个: '個', 数: '數', 据: '據', 无: '無', 资: '資', 料: '料', 开: '開', 询: '詢', 查: '查', 结: '結', 习: '習', 记: '記', 录: '錄', 识: '識', 语: '語', 音: '音', 读: '讀', 写: '寫', 转: '轉', 换: '換', 认: '認', 证: '證', 进: '進', 结: '結', 杀: '殺', 复: '復', 现: '現', 过: '過', 还: '還', 让: '讓', 发: '發', 现: '現', 诉: '訴', 诉: '訴', 选: '選', 择: '擇', 适: '適', 合: '合', 筛: '篩', 选: '選', 统: '統', 计: '計', 结: '結', 果: '果', 级: '級', 说: '說', 明: '明', 参: '參', 考: '考' };
     for (const [from, to] of Object.entries(simplifiedToTraditional)) text = text.split(from).join(to);
@@ -352,7 +352,7 @@
         $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
       }
     }
-    const found = events.find(([key, label]) => text.includes(label.split('／')[0]));
+    const found = events.find(([key, label]) => text.includes(label.split(/[／或]/)[0]));
     if (found) $('event-type').value = found[0];
     const weekdayAliases = [
       ['0', ['星期日', '星期天', '週日', '週天', '周日', '周天', '禮拜日', '禮拜天']], ['1', ['星期一', '週一', '周一', '禮拜一']], ['2', ['星期二', '週二', '周二', '禮拜二']],
