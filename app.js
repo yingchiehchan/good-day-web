@@ -293,7 +293,6 @@
       if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
       else fillGoodDayFromSpeech(voice.pending, false);
       voice.confirm.hidden = true;
-      if (voice.repeatButton) voice.repeatButton.hidden = false;
     };
     const retryVoice = (voice) => {
       voice.confirm.hidden = true;
@@ -319,7 +318,6 @@
       activeVoice = voice;
       voice.pending = '';
       voice.succeeded = false;
-      if (voice.repeatButton) voice.repeatButton.hidden = true;
       voice.status.setAttribute('aria-live', 'polite');
       voice.confirm.hidden = true;
       voice.transcript.hidden = true;
@@ -349,7 +347,10 @@
         voice.status.textContent = '';
         const confirmButton = voice.confirm.querySelector('.voice-confirm');
         voice.transcript.setAttribute('tabindex', '-1');
-        voice.transcript.setAttribute('aria-label', `辨識內容：${text}`);
+        voice.transcript.setAttribute('role', 'status');
+        voice.transcript.setAttribute('aria-live', 'assertive');
+        voice.transcript.setAttribute('aria-atomic', 'true');
+        voice.transcript.removeAttribute('aria-label');
         confirmButton.setAttribute('aria-label', '對，開始查詢');
       };
       recognition.onerror = (event) => {
@@ -397,15 +398,6 @@
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
       voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
-      const repeatButton = document.createElement('button');
-      repeatButton.type = 'button';
-      repeatButton.className = 'secondary-button voice-repeat';
-      repeatButton.textContent = target === 'lookup' ? '再次語音查詢' : '再次語音找好日子';
-      repeatButton.setAttribute('aria-label', repeatButton.textContent);
-      repeatButton.hidden = true;
-      form.parentElement.appendChild(repeatButton);
-      repeatButton.addEventListener('click', () => start(voice));
-      voice.repeatButton = repeatButton;
       return voice;
     };
     const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
@@ -413,17 +405,18 @@
   }
   function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
   function fillGoodDayFromSpeech(text, autoSubmit = true) {
-    if (text.includes('今年')) {
+    if (/今年|明年|後年/.test(text)) {
       const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/);
       if (monthMatch) {
         const names = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 };
         const month = Number(monthMatch[1]) || names[monthMatch[1]];
         const now = new Date();
-        const endYear = month === 12 ? now.getFullYear() + 1 : now.getFullYear();
+        const targetYear = text.includes('明年') ? now.getFullYear() + 1 : text.includes('後年') ? now.getFullYear() + 2 : now.getFullYear();
+        const endYear = month === 12 ? targetYear + 1 : targetYear;
         const endMonth = month === 12 ? 1 : month + 1;
         $('range-type').value = 'custom';
         $('custom-range').hidden = false;
-        $('custom-start').value = `${now.getFullYear()}-${String(month).padStart(2, '0')}-01`;
+        $('custom-start').value = `${targetYear}-${String(month).padStart(2, '0')}-01`;
         $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
       }
     }
