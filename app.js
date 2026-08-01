@@ -109,7 +109,11 @@
 
   function formatSolarDate(solar) {
     if (!solar) return '資料不足';
-    return `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`;
+    const hasTime = typeof solar.getHour === 'function' && typeof solar.getMinute === 'function';
+    if (!hasTime) return `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`;
+    const hour = String(solar.getHour()).padStart(2, '0');
+    const minute = String(solar.getMinute()).padStart(2, '0');
+    return `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日 ${hour}:${minute}`;
   }
 
   function renderDay(day) {
