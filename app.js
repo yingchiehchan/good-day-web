@@ -278,7 +278,6 @@
         } catch (_) { /* Some browsers block synthesized audio; visual and VoiceOver prompts remain. */ }
       }, delay);
     };
-    const readyTone = () => { playTone(660, 0.1); playTone(880, 0.12, 100); };
     const endTone = () => { playTone(880, 0.12); playTone(660, 0.16, 120); };
     const submitVoice = (voice) => {
       if (!voice.pending) return;
@@ -294,10 +293,9 @@
       voice.pending = '';
       voice.status.textContent = '';
       voice.restarting = true;
-      const restart = () => window.setTimeout(() => {
-        readyTone();
-        window.setTimeout(() => start(voice), 320);
-      }, 800);
+      // Restart immediately from the user's retry click. Safari can reject a
+      // delayed SpeechRecognition.start() after the original user gesture.
+      const restart = () => start(voice);
       if (recognition) {
         const previousEnd = recognition.onend;
         recognition.onend = () => {
@@ -339,13 +337,10 @@
         voice.transcript.setAttribute('tabindex', '-1');
         voice.transcript.setAttribute('aria-label', `辨識內容：${text}`);
         confirmButton.setAttribute('aria-label', '對，開始查詢');
-        window.setTimeout(() => {
-          voice.transcript.focus({ preventScroll: false });
-          window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 1500);
-        }, 0);
       };
       recognition.onerror = (event) => {
         clearRecognitionTimer();
+        if (event.error === 'aborted' && voice.restarting) return;
         const message = event.error === 'not-allowed' ? '沒有麥克風權限' : event.error === 'no-speech' ? '沒有辨識到語音' : event.error === 'network' ? '語音服務連線失敗' : '語音辨識失敗';
         voice.status.textContent = message;
         voice.confirm.hidden = true;
@@ -358,7 +353,16 @@
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
+        if (voice.pending) {
+          // Wait until recognition has really ended before moving focus. This
+          // prevents VoiceOver from announcing a checkbox while the user is
+          // still speaking and makes the confirmation step predictable.
+          const confirmButton = voice.confirm.querySelector('.voice-confirm');
+          window.setTimeout(() => {
+            voice.transcript.focus({ preventScroll: false });
+            window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 1500);
+          }, 0);
+        } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
       };
       try {
         recognition.start();
