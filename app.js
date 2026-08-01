@@ -271,14 +271,15 @@
       voice.transcript.hidden = true;
       voice.pending = '';
       voice.status.textContent = '準備重新錄音。';
+      const restart = () => window.setTimeout(() => start(voice), 400);
       if (recognition) {
         const previousEnd = recognition.onend;
         recognition.onend = () => {
           if (previousEnd) previousEnd();
-          window.setTimeout(() => start(voice), 0);
+          restart();
         };
-        recognition.stop();
-      } else start(voice);
+        try { recognition.abort(); } catch (_) { recognition.stop(); }
+      } else restart();
     };
     const listenForConfirmation = (voice) => {
       if (recognition) return;
