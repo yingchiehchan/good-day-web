@@ -204,9 +204,73 @@
     if (!Speech) return;
     let recognition = null;
     let activeVoice = null;
+    const playTone = (frequency, duration = 0.12, delay = 0) => {
+      window.setTimeout(() => {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+          const context = new AudioContext();
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.frequency.value = frequency;
+          oscillator.type = 'sine';
+          gain.gain.setValueAtTime(0.08, context.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
+          oscillator.connect(gain).connect(context.destination);
+          oscillator.start();
+          oscillator.stop(context.currentTime + duration);
+          oscillator.addEventListener('ended', () => context.close());
+        } catch (_) { /* Some browsers block synthesized audio; visual and VoiceOver prompts remain. */ }
+      }, delay);
+    };
+    const startTone = () => { playTone(660, 0.12); playTone(880, 0.16, 120); };
+    const endTone = () => { playTone(880, 0.12); playTone(660, 0.16, 120); };
+    const submitVoice = (voice) => {
+      if (!voice.pending) return;
+      if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
+      else fillGoodDayFromSpeech(voice.pending, false);
+      voice.status.textContent = '確認完成，正在查詢。結果已顯示在下方。';
+      voice.confirm.hidden = true;
+    };
+    const retryVoice = (voice) => {
+      voice.confirm.hidden = true;
+      voice.transcript.hidden = true;
+      voice.pending = '';
+      voice.status.textContent = '準備重新錄音。';
+      if (recognition) {
+        const previousEnd = recognition.onend;
+        recognition.onend = () => {
+          if (previousEnd) previousEnd();
+          window.setTimeout(() => start(voice), 0);
+        };
+        recognition.stop();
+      } else start(voice);
+    };
+    const listenForConfirmation = (voice) => {
+      if (recognition) return;
+      voice.status.textContent = '請回答「對」或「錯」。回答對會自動查詢，回答錯會重新錄音。';
+      voice.confirmVoice.disabled = true;
+      recognition = new Speech();
+      recognition.lang = 'zh-TW';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 3;
+      recognition.onresult = (event) => {
+        const answer = [...event.results].map((result) => result[0].transcript).join('');
+        if (/錯|不對|重來|重新/.test(answer)) retryVoice(voice);
+        else if (/對|正確|沒錯|是/.test(answer)) submitVoice(voice);
+        else voice.status.textContent = `我聽到的是「${answer}」。請回答「對」或「錯」。`;
+      };
+      recognition.onerror = () => { voice.status.textContent = '沒有聽清楚，請再按一次「用語音回答對或錯」，或直接選擇按鈕。'; };
+      recognition.onend = () => { recognition = null; voice.confirmVoice.disabled = false; };
+      try { recognition.start(); } catch (_) { recognition = null; voice.confirmVoice.disabled = false; voice.status.textContent = '語音確認目前無法啟動，請直接選擇「對」或「錯」。'; }
+    };
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
       activeVoice = voice;
+      voice.pending = '';
+      voice.confirm.hidden = true;
+      voice.transcript.hidden = true;
       voice.status.textContent = '正在聆聽，請說完後等待語音辨識完成。再次按下可停止。';
       voice.startButton.textContent = '停止語音輸入';
       voice.startButton.setAttribute('aria-pressed', 'true');
@@ -215,14 +279,14 @@
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.maxAlternatives = 3;
-      recognition.onstart = () => { voice.status.textContent = '正在聆聽，請說出完整條件。'; };
+      recognition.onstart = () => { startTone(); voice.status.textContent = '正在聆聽，請說出完整條件。'; };
       recognition.onresult = (event) => {
         const text = [...event.results].map((result) => result[0].transcript).join('');
         voice.transcript.querySelector('span').textContent = text;
         voice.transcript.hidden = false;
         voice.confirm.hidden = false;
-        voice.retry.hidden = true;
-        voice.status.textContent = '語音辨識完成。請確認「我聽到的是」內容，再按「開始查詢」。';
+        endTone();
+        voice.status.textContent = '語音辨識完成。請回答「對」或「錯」，也可以直接選擇按鈕。';
         voice.pending = text;
       };
       recognition.onerror = (event) => {
@@ -235,7 +299,7 @@
         recognition = null;
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束。若有辨識內容，請按「開始查詢」。';
+        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束，請重新錄音。';
       };
       try { recognition.start(); } catch (_) { voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
     };
@@ -243,19 +307,14 @@
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
-      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite">按下後說出完整條件；辨識完成後，請再按「開始查詢」。</p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">開始查詢</button><button type="button" class="secondary-button voice-retry">重新錄音</button></div>`;
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite">按下後會播放提示音，請說出完整條件；辨識完成後請回答「對」或「錯」。</p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button><button type="button" class="secondary-button voice-confirm-voice">用語音回答對或錯</button></div>`;
       form.prepend(area);
-      const voice = { area, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '' };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), confirmVoice: area.querySelector('.voice-confirm-voice'), retry: area.querySelector('.voice-retry'), pending: '' };
       voice.startButton.addEventListener('click', () => start(voice));
-      voice.retry.hidden = true;
-      voice.retry.addEventListener('click', () => { voice.confirm.hidden = true; voice.transcript.hidden = true; voice.pending = ''; start(voice); });
-      voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => {
-        if (!voice.pending) return;
-        if (target === 'lookup') fillLookupFromSpeech(voice.pending, form);
-        else fillGoodDayFromSpeech(voice.pending, false);
-        voice.status.textContent = '已送出查詢，結果已顯示在本頁下方。';
-        voice.confirm.hidden = true;
-      });
+      voice.retry.hidden = false;
+      voice.retry.addEventListener('click', () => retryVoice(voice));
+      voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
+      voice.confirmVoice.addEventListener('click', () => listenForConfirmation(voice));
       return voice;
     };
     const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
