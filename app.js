@@ -84,6 +84,11 @@
     const ji = value(lunar, ['getDayJi'], []).map(traditional);
     const solarText = `${solar.getYear()}年${String(solar.getMonth()).padStart(2, '0')}月${String(solar.getDay()).padStart(2, '0')}日 ${String(solar.getHour()).padStart(2, '0')}:${String(solar.getMinute()).padStart(2, '0')}`;
     const term = traditional(value(lunar, ['getJieQi'], '今日不是節氣'));
+    const prevJieQi = value(lunar, ['getPrevJieQi'], null);
+    const nextJieQi = value(lunar, ['getNextJieQi'], null);
+    const termText = (jieQi) => jieQi && typeof jieQi.getName === 'function' && typeof jieQi.getSolar === 'function'
+      ? `${traditional(jieQi.getName())}，${formatSolarDate(jieQi.getSolar())}`
+      : '資料不足';
     return {
       solarText,
       lunarText: traditional(value(lunar, ['toString', 'toFullString'], '農曆資料不足')),
@@ -94,15 +99,22 @@
       timeGanZhi: traditional(value(lunar, ['getTimeInGanZhi'], '資料不足')).replaceAll('醜', '丑'),
       zodiac: traditional(value(lunar, ['getYearShengXiaoByLiChun', 'getYearShengXiao'], '資料不足')),
       term,
+      prevTerm: termText(prevJieQi),
+      nextTerm: termText(nextJieQi),
       yi,
       ji,
       clash: traditional(value(lunar, ['getDayChongDesc'], '資料不足'))
     };
   }
 
+  function formatSolarDate(solar) {
+    if (!solar) return '資料不足';
+    return `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`;
+  }
+
   function renderDay(day) {
     const list = (items) => items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<p>無資料</p>';
-    return `<article class="result-card" tabindex="0"><h3>查詢結果</h3><dl><dt>國曆</dt><dd>${escapeHtml(day.solarText)}</dd><dt>農曆</dt><dd>${escapeHtml(day.lunarText)}</dd><dt>星期</dt><dd>${escapeHtml(day.weekday)}</dd><dt>生肖</dt><dd>${escapeHtml(day.zodiac)}</dd><dt>年柱</dt><dd>${escapeHtml(day.yearGanZhi)}</dd><dt>月柱</dt><dd>${escapeHtml(day.monthGanZhi)}</dd><dt>日柱</dt><dd>${escapeHtml(day.dayGanZhi)}</dd><dt>時柱</dt><dd>${escapeHtml(day.timeGanZhi)}</dd><dt>節氣</dt><dd>${escapeHtml(day.term)}</dd><dt>相沖</dt><dd>${escapeHtml(day.clash)}</dd></dl><h4>宜</h4>${list(day.yi)}<h4>忌</h4>${list(day.ji)}</article>`;
+    return `<article class="result-card" tabindex="0"><h3>查詢結果</h3><dl><dt>國曆</dt><dd>${escapeHtml(day.solarText)}</dd><dt>農曆</dt><dd>${escapeHtml(day.lunarText)}</dd><dt>星期</dt><dd>${escapeHtml(day.weekday)}</dd><dt>生肖</dt><dd>${escapeHtml(day.zodiac)}</dd><dt>年柱</dt><dd>${escapeHtml(day.yearGanZhi)}</dd><dt>月柱</dt><dd>${escapeHtml(day.monthGanZhi)}</dd><dt>日柱</dt><dd>${escapeHtml(day.dayGanZhi)}</dd><dt>時柱</dt><dd>${escapeHtml(day.timeGanZhi)}</dd><dt>目前節氣</dt><dd>${escapeHtml(day.term)}</dd><dt>前一個節氣</dt><dd>${escapeHtml(day.prevTerm)}</dd><dt>下一個節氣</dt><dd>${escapeHtml(day.nextTerm)}</dd><dt>相沖生肖</dt><dd>${escapeHtml(day.clash)}</dd></dl></article>`;
   }
 
   function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
