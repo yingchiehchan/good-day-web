@@ -344,9 +344,9 @@
     const found = events.find(([key, label]) => text.includes(label.split('／')[0]));
     if (found) $('event-type').value = found[0];
     const weekdayAliases = [
-      ['0', ['星期日', '週日', '周日']], ['1', ['星期一', '週一', '周一']], ['2', ['星期二', '週二', '周二']],
-      ['3', ['星期三', '週三', '周三']], ['4', ['星期四', '週四', '周四']], ['5', ['星期五', '週五', '周五']],
-      ['6', ['星期六', '週六', '周六']]
+      ['0', ['星期日', '星期天', '週日', '週天', '周日', '周天', '禮拜日', '禮拜天']], ['1', ['星期一', '週一', '周一', '禮拜一']], ['2', ['星期二', '週二', '周二', '禮拜二']],
+      ['3', ['星期三', '週三', '周三', '禮拜三']], ['4', ['星期四', '週四', '周四', '禮拜四']], ['5', ['星期五', '週五', '周五', '禮拜五']],
+      ['6', ['星期六', '週六', '周六', '禮拜六']]
     ];
     const requestedWeekdays = weekdayAliases.filter(([, aliases]) => aliases.some((alias) => text.includes(alias))).map(([value]) => value);
     if (requestedWeekdays.length) document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = requestedWeekdays.includes(input.value); });
