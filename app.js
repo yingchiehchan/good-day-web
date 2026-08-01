@@ -137,7 +137,7 @@
     ['solar-year', 'solar-month', 'solar-day'].forEach((id, index) => $(id).value = [now.year, now.month, now.day][index]);
     ['lunar-year', 'lunar-month', 'lunar-day'].forEach((id, index) => $(id).value = [now.year, now.month, now.day][index]);
     $('event-type').innerHTML = events.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
-    $('weekday-options').innerHTML = weekdays.map(([value, label]) => `<label><input type="checkbox" value="${value}"> ${label}</label>`).join('');
+    $('weekday-options').innerHTML = weekdays.map(([value, label]) => `<label><input type="checkbox" value="${value}" checked> ${label}</label>`).join('');
   }
 
   function navigate(id) {
@@ -195,9 +195,10 @@
       results.push({ ...day, date: new Date(date), yi });
     }
     const area = $('good-day-result');
-    if (!results.length) { area.innerHTML = '<div class="empty" role="alert">沒有符合條件的日期，請放寬日期、星期或生肖條件。</div>'; return; }
+    if (!results.length) { area.innerHTML = '<div class="empty" role="alert" tabindex="-1">沒有符合條件的日期，請放寬日期、星期或生肖條件。</div>'; window.setTimeout(() => area.querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0); return; }
     const shown = results.slice(0, 30);
-    area.innerHTML = `<h3 class="result-heading" tabindex="0">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
+    area.innerHTML = `<h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
+    window.setTimeout(() => area.querySelector('.result-heading')?.focus({ preventScroll: false }), 0);
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }
@@ -232,10 +233,7 @@
       voice.status.setAttribute('aria-live', 'off');
       voice.status.textContent = '';
       if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
-      else {
-        fillGoodDayFromSpeech(voice.pending, false);
-        window.setTimeout(() => document.querySelector('#good-day-result .result-heading')?.focus({ preventScroll: false }), 0);
-      }
+      else fillGoodDayFromSpeech(voice.pending, false);
       voice.confirm.hidden = true;
     };
     const retryVoice = (voice) => {
@@ -328,7 +326,34 @@
     addButton('good-day-form', 'good-day', '開始語音找好日子');
   }
   function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
-  function fillGoodDayFromSpeech(text, autoSubmit = true) { if (text.includes('今年')) { const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/); if (monthMatch) { const names = { 一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12 }; const month = Number(monthMatch[1]) || names[monthMatch[1]]; const now = new Date(); const endYear = month === 12 ? now.getFullYear() + 1 : now.getFullYear(); const endMonth = month === 12 ? 1 : month + 1; $('range-type').value = 'custom'; $('custom-range').hidden = false; $('custom-start').value = `${now.getFullYear()}-${String(month).padStart(2, '0')}-01`; $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`; } } const found = events.find(([key, label]) => text.includes(label.split('／')[0])); if (found) $('event-type').value = found[0]; weekdays.forEach(([value, label]) => { const input = document.querySelector(`#weekday-options input[value="${value}"]`); if (input) input.checked = text.includes(label); }); if (text.includes('上午')) $('period').value = 'morning'; if (text.includes('下午')) $('period').value = 'afternoon'; if (autoSubmit) searchGoodDays(); }
+  function fillGoodDayFromSpeech(text, autoSubmit = true) {
+    if (text.includes('今年')) {
+      const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/);
+      if (monthMatch) {
+        const names = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 };
+        const month = Number(monthMatch[1]) || names[monthMatch[1]];
+        const now = new Date();
+        const endYear = month === 12 ? now.getFullYear() + 1 : now.getFullYear();
+        const endMonth = month === 12 ? 1 : month + 1;
+        $('range-type').value = 'custom';
+        $('custom-range').hidden = false;
+        $('custom-start').value = `${now.getFullYear()}-${String(month).padStart(2, '0')}-01`;
+        $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+      }
+    }
+    const found = events.find(([key, label]) => text.includes(label.split('／')[0]));
+    if (found) $('event-type').value = found[0];
+    const weekdayAliases = [
+      ['0', ['星期日', '週日', '周日']], ['1', ['星期一', '週一', '周一']], ['2', ['星期二', '週二', '周二']],
+      ['3', ['星期三', '週三', '周三']], ['4', ['星期四', '週四', '周四']], ['5', ['星期五', '週五', '周五']],
+      ['6', ['星期六', '週六', '周六']]
+    ];
+    const requestedWeekdays = weekdayAliases.filter(([, aliases]) => aliases.some((alias) => text.includes(alias))).map(([value]) => value);
+    if (requestedWeekdays.length) document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = requestedWeekdays.includes(input.value); });
+    if (text.includes('上午')) $('period').value = 'morning';
+    if (text.includes('下午')) $('period').value = 'afternoon';
+    if (autoSubmit) searchGoodDays();
+  }
 
   document.addEventListener('click', (event) => { const button = event.target.closest('[data-go]'); if (button) navigate(button.dataset.go); });
   populate(); initLookup(); initGoodDays(); initVoice();
