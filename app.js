@@ -325,6 +325,36 @@
     };
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
+      if (voice.needsWarmup && !voice.warmingUp) {
+        voice.warmingUp = true;
+        voice.needsWarmup = false;
+        voice.startButton.textContent = '停止語音輸入';
+        voice.startButton.setAttribute('aria-label', '停止語音輸入');
+        voice.startButton.setAttribute('aria-pressed', 'true');
+        const warmup = new Speech();
+        let finished = false;
+        const finishWarmup = () => {
+          if (finished) return;
+          finished = true;
+          warmup.onstart = null;
+          warmup.onend = null;
+          warmup.onerror = null;
+          try { warmup.abort(); } catch (_) {}
+          voice.warmingUp = false;
+          window.setTimeout(() => start(voice), 450);
+        };
+        warmup.lang = 'zh-TW';
+        warmup.continuous = false;
+        warmup.interimResults = false;
+        warmup.onstart = () => window.setTimeout(() => { try { warmup.stop(); } catch (_) { finishWarmup(); } }, 250);
+        warmup.onend = finishWarmup;
+        warmup.onerror = finishWarmup;
+        try {
+          warmup.start();
+          window.setTimeout(finishWarmup, 1100);
+        } catch (_) { finishWarmup(); }
+        return;
+      }
       const session = ++voiceSession;
       activeVoice = voice;
       voice.pending = '';
@@ -356,6 +386,7 @@
         voice.status.textContent = '辨識完成';
         voice.pending = text;
         voice.succeeded = true;
+        voice.needsWarmup = true;
         voice.status.setAttribute('aria-live', 'off');
         voice.status.textContent = '';
         const confirmButton = voice.confirm.querySelector('.voice-confirm');
@@ -412,7 +443,7 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false, recoveryCount: 0 };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false, recoveryCount: 0, needsWarmup: false, warmingUp: false };
       voice.startButton.addEventListener('click', () => { voice.recoveryCount = 0; start(voice); });
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
