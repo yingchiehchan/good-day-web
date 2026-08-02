@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.44</p>
+      <p class="app-version">版本 v2.45</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -40,6 +40,7 @@
 
     <section id="lookup-panel" class="panel" aria-labelledby="lookup-title" tabindex="-1" hidden>
       <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="lookup-title" tabindex="-1">日期查詢</h2></div>
+      <div id="lookup-voice-anchor"></div>
       <div class="segmented" role="group" aria-label="選擇曆法">
         <button class="segment active" data-calendar="solar" aria-pressed="true">國曆</button>
         <button class="segment" data-calendar="lunar" aria-pressed="false">農曆</button>
@@ -107,6 +108,6 @@
   <div id="navigation-announcement" class="sr-only" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260802-v244-simple-navigation" defer></script>
+  <script src="app.js?v=20260802-v245-shared-lookup-voice" defer></script>
 </body>
 </html>

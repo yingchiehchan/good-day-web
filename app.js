@@ -390,18 +390,19 @@
         recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 20000);
       } catch (_) { clearRecognitionTimer(); voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
     };
-    const addButton = (parent, target, label) => {
+    const addButton = (parent, target, label, mount = parent) => {
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button></div>`;
-      form.prepend(area);
+      if (mount === parent) form.prepend(area);
+      else $(mount).append(area);
       const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), pending: '', succeeded: false };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
       return voice;
     };
-    const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
+    addButton('solar-form', 'lookup', '開始語音查詢', 'lookup-voice-anchor');
     addButton('good-day-form', 'good-day', '開始語音找好日子');
     const releaseMicrophone = () => {
       invalidateRecognition();
