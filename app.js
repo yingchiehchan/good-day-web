@@ -15,6 +15,22 @@
     travel: ['出行'], medical: ['求醫'], business: ['開市', '交易'], renovation: ['修造', '動土'],
     burial: ['安葬'], engagement: ['納采', '訂婚'], naming: ['求嗣', '命名'], worship: ['祭祀']
   };
+  const voiceEventAliases = {
+    moving: ['搬家', '入厝', '入宅', '移徙'],
+    wedding: ['結婚', '登記', '嫁娶', '婚禮', '成婚'],
+    opening: ['開工', '動土'],
+    grandOpening: ['開幕', '新店開幕'],
+    contract: ['簽約', '合約', '合同', '立券'],
+    installation: ['安床'],
+    travel: ['出行', '旅行', '旅遊', '出遊'],
+    medical: ['就醫', '看醫生', '手術', '求醫'],
+    business: ['開市', '交易'],
+    renovation: ['修繕', '裝修', '修造'],
+    burial: ['安葬', '下葬'],
+    engagement: ['訂婚', '納采'],
+    naming: ['求子', '命名', '取名'],
+    worship: ['祭祀', '拜拜']
+  };
   const lunarLoaded = () => typeof window.Solar !== 'undefined' && typeof window.Lunar !== 'undefined';
 
   function traditional(value) {
@@ -50,7 +66,7 @@
       未: ['未時', '未时', '餵食', '喂食', '餵時', '喂时', '未石', '餵石', '喂石'],
       申: ['申時', '申时', '身時', '身时', '生食', '生時', '深時', '申石', '身石', '生石', '深石'],
       酉: ['酉時', '酉时', '有事', '有時', '有时', '酉石', '有石'],
-      戌: ['戌時', '戌时', '需時', '需时', '徐時', '徐时', '戌石', '需石', '徐石', '趨勢', '趋势'],
+      戌: ['戌時', '戌时', '需時', '需时', '徐時', '徐时', '戌石', '需石', '徐石', '趨勢', '趋势', '虛實', '虚实'],
       亥: ['亥時', '亥时', '海時', '海时', '還時', '还时', '亥石', '海石']
     };
     if (/(?:日|號|号)(?:40|四十)(?:時|时|點|点|石)?$/.test(compactText)) return [10, 0];
@@ -87,7 +103,9 @@
   }
 
   function parseSpokenDate(text) {
-    const dateMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*[日號号]?/);
+    const lunar = /農曆|農歷|阴历|陰曆|陰歷|老黃曆|老黃歷/.test(text);
+    const normalizedDateText = text.replace(/國曆|國歷|公曆|公歷|陽曆|陽歷|農曆|農歷|阴历|陰曆|陰歷|老黃曆|老黃歷/g, '');
+    const dateMatch = normalizedDateText.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*[日號号]?/);
     if (!dateMatch) return null;
     const inputYear = chineseNumber(dateMatch[1]);
     const month = chineseNumber(dateMatch[2]);
@@ -96,7 +114,7 @@
     const roc = isRocSpokenYear(text, inputYear);
     const year = roc ? inputYear + 1911 : inputYear;
     const [hour, minute] = parseTime(text);
-    return { year, inputYear, month, day, hour, minute, roc, lunar: text.includes('農曆') || text.includes('陰曆') || text.includes('老黃曆') };
+    return { year, inputYear, month, day, hour, minute, roc, lunar };
   }
 
   function solarFromLunar(query) {
@@ -235,10 +253,10 @@
     area.removeAttribute('tabindex');
     if (!results.length) { area.innerHTML = '<div class="empty" role="alert" tabindex="-1">沒有符合條件的日期，請放寬日期、星期或生肖條件。</div>'; window.setTimeout(() => area.querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0); return; }
     const shown = results.slice(0, 30);
-    const spokenResults = shown.slice(0, 5).map((day, index) => `第${index + 1}個，${calendar.format(day.date)}，老黃曆宜：${day.yi.join('、')}`).join('。');
+    const spokenResults = shown.slice(0, 5).map((day, index) => `第${index + 1}個，${calendar.format(day.date)}，干支日：${day.dayGanZhi}，相沖生肖：${day.clash}，老黃曆宜：${day.yi.join('、')}`).join('。');
     const spokenLead = results.length <= 5 ? '結果如下：' : '先播報前五個：';
     const spokenSummary = `找到 ${results.length} 個符合條件的日期。${spokenLead}${spokenResults}`;
-    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
+    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>干支日：</strong>${escapeHtml(day.dayGanZhi)}</p><p><strong>相沖生肖：</strong>${escapeHtml(day.clash)}</p><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
     area.setAttribute('tabindex', '-1');
     area.removeAttribute('aria-label');
     window.setTimeout(() => area.querySelector('.result-summary')?.focus({ preventScroll: false }), 0);
@@ -410,6 +428,8 @@
     return true;
   }
   function fillGoodDayFromSpeech(text, autoSubmit = true) {
+    document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = true; });
+    $('period').value = 'any';
     const absoluteMonthMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月/);
     if (absoluteMonthMatch) {
       const inputYear = chineseNumber(absoluteMonthMatch[1]);
@@ -426,15 +446,16 @@
         setGoodDayMonthRange(targetYear, month);
       }
     }
-    const found = events.find(([key, label]) => text.includes(label.split(/[／或]/)[0]));
-    if (found) $('event-type').value = found[0];
+    let foundEvent = Object.entries(voiceEventAliases).find(([, aliases]) => aliases.some((alias) => text.includes(alias)))?.[0];
+    if (!foundEvent && text.includes('假期')) foundEvent = 'wedding';
+    if (foundEvent) $('event-type').value = foundEvent;
     const weekdayAliases = [
       ['0', ['星期日', '星期天', '週日', '週天', '周日', '周天', '禮拜日', '禮拜天']], ['1', ['星期一', '週一', '周一', '禮拜一']], ['2', ['星期二', '週二', '周二', '禮拜二']],
       ['3', ['星期三', '週三', '周三', '禮拜三']], ['4', ['星期四', '週四', '周四', '禮拜四']], ['5', ['星期五', '週五', '周五', '禮拜五']],
       ['6', ['星期六', '週六', '周六', '禮拜六']]
     ];
     const isWeekend = /週末|周末|星期六日|星期日六|六日/.test(text);
-    const requestedWeekdays = isWeekend ? ['5', '6'] : weekdayAliases.filter(([, aliases]) => aliases.some((alias) => text.includes(alias))).map(([value]) => value);
+    const requestedWeekdays = isWeekend ? ['0', '6'] : weekdayAliases.filter(([, aliases]) => aliases.some((alias) => text.includes(alias))).map(([value]) => value);
     if (requestedWeekdays.length) document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = requestedWeekdays.includes(input.value); });
     if (text.includes('上午')) $('period').value = 'morning';
     if (text.includes('下午')) $('period').value = 'afternoon';
