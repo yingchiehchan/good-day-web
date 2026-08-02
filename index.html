@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.43</p>
+      <p class="app-version">版本 v2.44</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -70,6 +70,7 @@
         <button class="primary-button" type="submit">轉換並查看完整資料</button>
       </form>
       <div id="lookup-result" class="result-area" aria-live="polite"></div>
+      <div class="panel-footer"><button class="back-button" data-go="home-panel">回首頁</button></div>
     </section>
 
     <section id="good-day-panel" class="panel" aria-labelledby="good-day-title" tabindex="-1" hidden>
@@ -89,6 +90,7 @@
         <button class="primary-button" type="submit">搜尋好日子</button>
       </form>
       <div id="good-day-result" class="result-area"></div>
+      <div class="panel-footer"><button class="back-button" data-go="home-panel">回首頁</button></div>
     </section>
 
     <section id="about-panel" class="panel about-panel" aria-labelledby="about-title" tabindex="-1" hidden>
@@ -103,13 +105,8 @@
   </main>
 
   <div id="navigation-announcement" class="sr-only" role="status" aria-live="polite"></div>
-  <nav class="tab-bar" aria-label="主要導覽">
-    <button class="tab active" data-go="home-panel" aria-controls="home-panel" aria-current="page">首頁</button>
-    <button class="tab" data-go="lookup-panel" aria-controls="lookup-panel">日曆</button>
-    <button class="tab" data-go="good-day-panel" aria-controls="good-day-panel">擇日</button>
-  </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260802-v243-accessible-results" defer></script>
+  <script src="app.js?v=20260802-v244-simple-navigation" defer></script>
 </body>
 </html>

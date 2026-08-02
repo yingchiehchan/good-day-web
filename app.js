@@ -191,7 +191,6 @@
 
   function navigate(id) {
     document.querySelectorAll('main > section.panel').forEach((panel) => { panel.hidden = panel.id !== id; });
-    document.querySelectorAll('.tab').forEach((button) => { const active = button.dataset.go === id; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
     const panel = document.getElementById(id);
     const heading = panel.querySelector('h2');
     const announcement = $('navigation-announcement');
