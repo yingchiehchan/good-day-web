@@ -280,26 +280,6 @@
       oldRecognition.onend = null;
       try { oldRecognition.abort(); } catch (_) { try { oldRecognition.stop(); } catch (_) {} }
     };
-    const playTone = (frequency, duration = 0.12, delay = 0) => {
-      window.setTimeout(() => {
-        try {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContext) return;
-          const context = new AudioContext();
-          const oscillator = context.createOscillator();
-          const gain = context.createGain();
-          oscillator.frequency.value = frequency;
-          oscillator.type = 'sine';
-          gain.gain.setValueAtTime(0.08, context.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
-          oscillator.connect(gain).connect(context.destination);
-          oscillator.start();
-          oscillator.stop(context.currentTime + duration);
-          oscillator.addEventListener('ended', () => context.close());
-        } catch (_) { /* Some browsers block synthesized audio; visual and VoiceOver prompts remain. */ }
-      }, delay);
-    };
-    const endTone = () => { playTone(880, 0.12); playTone(660, 0.16, 120); };
     const submitVoice = (voice) => {
       if (!voice.pending) return;
       voice.status.setAttribute('aria-live', 'off');
@@ -351,7 +331,6 @@
         voice.transcript.textContent = `我聽到的是：${text}`;
         voice.transcript.hidden = false;
         voice.confirm.hidden = false;
-        endTone();
         voice.status.textContent = '辨識完成';
         voice.pending = text;
         voice.succeeded = true;
@@ -364,6 +343,11 @@
         voice.transcript.setAttribute('aria-atomic', 'true');
         voice.transcript.setAttribute('aria-label', `我聽到的是：${text}`);
         voice.transcript.setAttribute('role', 'alert');
+        const completedRecognition = recognition;
+        window.setTimeout(() => {
+          if (session !== voiceSession || recognition !== completedRecognition) return;
+          try { completedRecognition.abort(); } catch (_) { try { completedRecognition.stop(); } catch (_) {} }
+        }, 0);
         confirmButton.setAttribute('aria-label', '對，開始查詢');
       };
       recognition.onerror = (event) => {
@@ -412,6 +396,17 @@
     };
     const lookupVoice = [addButton('solar-form', 'lookup', '開始語音查詢'), addButton('lunar-form', 'lookup', '開始語音查詢')];
     addButton('good-day-form', 'good-day', '開始語音找好日子');
+    const releaseMicrophone = () => {
+      invalidateRecognition();
+      if (!activeVoice) return;
+      activeVoice.startButton.textContent = '重新錄音';
+      activeVoice.startButton.setAttribute('aria-label', '重新錄音');
+      activeVoice.startButton.setAttribute('aria-pressed', 'false');
+    };
+    window.addEventListener('pagehide', releaseMicrophone);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) releaseMicrophone();
+    });
   }
   function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
   function fillGoodDayFromSpeech(text, autoSubmit = true) {
