@@ -250,7 +250,10 @@
       let content = '';
       if (key === 'calendar') content = `<h4 id="guided-step-title" tabindex="-1">選擇曆法</h4><fieldset><legend>日期使用哪一種曆法</legend><label class="guided-choice"><input type="radio" name="guided-calendar" value="solar"${state.calendar === 'solar' ? ' checked' : ''}> 國曆</label><label class="guided-choice"><input type="radio" name="guided-calendar" value="lunar"${state.calendar === 'lunar' ? ' checked' : ''}> 農曆</label></fieldset>`;
       if (key === 'era') content = `<h4 id="guided-step-title" tabindex="-1">選擇年份制度</h4><fieldset><legend>年份使用哪一種制度</legend><label class="guided-choice"><input type="radio" name="guided-era" value="western"${state.era === 'western' ? ' checked' : ''}> 西元</label><label class="guided-choice"><input type="radio" name="guided-era" value="roc"${state.era === 'roc' ? ' checked' : ''}> 民國</label></fieldset>`;
-      if (key === 'year') content = `<h4 id="guided-step-title" tabindex="-1">輸入年份</h4><label for="guided-year">${state.era === 'roc' ? '民國年份' : '西元年份'}</label><input id="guided-year" type="number" inputmode="numeric" min="1" max="3000" value="${state.year}" required>`;
+      if (key === 'year') {
+        const thisYear = state.era === 'roc' ? now.year - 1911 : now.year;
+        content = `<h4 id="guided-step-title" tabindex="-1">輸入年份</h4><label for="guided-year">${state.era === 'roc' ? '民國年份' : '西元年份'}，直接輸入完整數字</label><input id="guided-year" type="text" inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4" value="${state.year}" enterkeyhint="next" autocomplete="off" required><button id="guided-year-current" class="back-button" type="button">使用今年，${thisYear}年</button>`;
+      }
       if (key === 'month') content = `<h4 id="guided-step-title" tabindex="-1">選擇月份</h4><label for="guided-month">月份</label><select id="guided-month">${options(1, 12, state.month, '月')}</select>`;
       if (key === 'leap') content = `<h4 id="guided-step-title" tabindex="-1">選擇一般月份或閏月</h4><fieldset><legend>月份類型</legend><label class="guided-choice"><input type="radio" name="guided-leap" value="no"${state.leap ? '' : ' checked'}> 一般月份</label><label class="guided-choice"><input type="radio" name="guided-leap" value="yes"${state.leap ? ' checked' : ''}> 閏月</label></fieldset>`;
       if (key === 'day') {
@@ -289,6 +292,7 @@
     stepArea.addEventListener('click', (event) => {
       const previous = event.target.closest('[data-guided-action="previous"]');
       if (previous) { state.step -= 1; render(); return; }
+      if (event.target.closest('#guided-year-current')) { const input = $('guided-year'); input.value = state.era === 'roc' ? now.year - 1911 : now.year; input.focus({ preventScroll: false }); input.select(); return; }
       if (event.target.closest('#guided-restart')) { $('lookup-result').innerHTML = ''; state.step = 0; render(); return; }
       if (!event.target.closest('#guided-run')) return;
       const prefix = state.calendar === 'lunar' ? 'lunar' : 'solar';
@@ -301,6 +305,7 @@
       $(`${prefix}-time`).value = `${String(state.hour).padStart(2, '0')}:${String(state.minute).padStart(2, '0')}`;
       document.querySelector(`#${prefix}-form`).requestSubmit();
     });
+    stepArea.addEventListener('focusin', (event) => { if (event.target.id === 'guided-year') event.target.select(); });
   }
 
   function rangeDates(type) {
@@ -352,6 +357,105 @@
     area.setAttribute('tabindex', '-1');
     area.removeAttribute('aria-label');
     window.setTimeout(() => area.querySelector('.result-summary')?.focus({ preventScroll: false }), 0);
+  }
+
+  function initGuidedGoodDays() {
+    const toggle = $('guided-good-toggle'), panel = $('guided-good-entry'), close = $('guided-good-close'), classic = $('classic-good-entry'), stepArea = $('guided-good-step'), progress = $('guided-good-progress');
+    if (!toggle || !panel || !close || !classic || !stepArea || !progress) return;
+    const ranges = [['next7', '未來七天'], ['month', '本月'], ['nextMonth', '下個月'], ['twoYears', '未來兩年'], ['fiveYears', '未來五年'], ['custom', '自訂日期範圍']];
+    const periods = [['any', '不限時段'], ['morning', '上午'], ['afternoon', '下午']];
+    const zodiacNames = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
+    const today = new Date();
+    const dateDigits = (date) => `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextMonth = new Date(tomorrow); nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const state = { event: 'moving', range: 'next7', customStart: dateDigits(tomorrow), customEnd: dateDigits(nextMonth), weekdayMode: 'all', weekdays: ['0', '1', '2', '3', '4', '5', '6'], period: 'any', zodiacMode: 'none', zodiac: '虎', step: 0 };
+    const steps = () => ['event', 'range', ...(state.range === 'custom' ? ['customRange'] : []), 'weekdayMode', ...(state.weekdayMode === 'custom' ? ['weekdays'] : []), 'period', 'zodiacMode', ...(state.zodiacMode === 'avoid' ? ['zodiac'] : []), 'summary'];
+    const optionList = (items, selected) => items.map(([value, label]) => `<option value="${value}"${value === selected ? ' selected' : ''}>${label}</option>`).join('');
+    const radioList = (name, items, selected) => items.map(([value, label]) => `<label class="guided-choice"><input type="radio" name="${name}" value="${value}"${value === selected ? ' checked' : ''}> ${label}</label>`).join('');
+    const digitsToIso = (digits) => `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    const validDateDigits = (digits) => {
+      if (!/^\d{8}$/.test(digits)) return false;
+      const year = Number(digits.slice(0, 4)), month = Number(digits.slice(4, 6)), day = Number(digits.slice(6, 8));
+      const date = new Date(year, month - 1, day, 12);
+      return date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day;
+    };
+    const readableDate = (digits) => `${Number(digits.slice(0, 4))}年${Number(digits.slice(4, 6))}月${Number(digits.slice(6, 8))}日`;
+    const selectedWeekdays = () => state.weekdays.map((value) => weekdays.find(([day]) => day === value)?.[1]).filter(Boolean).join('、');
+    const summaryText = () => {
+      const eventName = events.find(([value]) => value === state.event)?.[1];
+      const rangeName = state.range === 'custom' ? `${readableDate(state.customStart)}到${readableDate(state.customEnd)}` : ranges.find(([value]) => value === state.range)?.[1];
+      const weekdayName = state.weekdayMode === 'all' ? '所有星期' : state.weekdayMode === 'weekday' ? '星期一到星期五' : state.weekdayMode === 'weekend' ? '星期六和星期日' : selectedWeekdays();
+      const periodName = periods.find(([value]) => value === state.period)?.[1];
+      const zodiacName = state.zodiacMode === 'avoid' ? `避開相沖生肖${state.zodiac}` : '不限制生肖';
+      return `${eventName}，${rangeName}，${weekdayName}，${periodName}，${zodiacName}`;
+    };
+    const render = () => {
+      const currentSteps = steps();
+      state.step = Math.max(0, Math.min(state.step, currentSteps.length - 1));
+      const key = currentSteps[state.step];
+      progress.textContent = `第 ${state.step + 1} 步，共 ${currentSteps.length} 步`;
+      let content = '';
+      if (key === 'event') content = `<h4 id="guided-good-step-title" tabindex="-1">選擇要做的事情</h4><label for="guided-good-event">要做的事情</label><select id="guided-good-event">${optionList(events, state.event)}</select>`;
+      if (key === 'range') content = `<h4 id="guided-good-step-title" tabindex="-1">選擇日期範圍</h4><label for="guided-good-range">日期範圍</label><select id="guided-good-range">${optionList(ranges, state.range)}</select>`;
+      if (key === 'customRange') content = `<h4 id="guided-good-step-title" tabindex="-1">輸入自訂日期範圍</h4><label for="guided-good-start">開始日期，輸入八位數字</label><input id="guided-good-start" type="text" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" value="${state.customStart}" autocomplete="off" required><label for="guided-good-end">結束日期，輸入八位數字</label><input id="guided-good-end" type="text" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" value="${state.customEnd}" autocomplete="off" required>`;
+      if (key === 'weekdayMode') content = `<h4 id="guided-good-step-title" tabindex="-1">選擇星期條件</h4><fieldset><legend>要搜尋哪些星期</legend>${radioList('guided-weekday-mode', [['all', '所有星期'], ['weekday', '星期一到星期五'], ['weekend', '星期六和星期日'], ['custom', '自己選擇星期']], state.weekdayMode)}</fieldset>`;
+      if (key === 'weekdays') content = `<h4 id="guided-good-step-title" tabindex="-1">自己選擇星期</h4><fieldset><legend>至少選擇一個星期</legend>${weekdays.map(([value, label]) => `<label class="guided-choice"><input type="checkbox" name="guided-weekday" value="${value}"${state.weekdays.includes(value) ? ' checked' : ''}> ${label}</label>`).join('')}</fieldset>`;
+      if (key === 'period') content = `<h4 id="guided-good-step-title" tabindex="-1">選擇時段</h4><fieldset><legend>希望的時段</legend>${radioList('guided-period', periods, state.period)}</fieldset>`;
+      if (key === 'zodiacMode') content = `<h4 id="guided-good-step-title" tabindex="-1">選擇生肖限制</h4><fieldset><legend>是否避開相沖生肖</legend>${radioList('guided-zodiac-mode', [['none', '不限制生肖'], ['avoid', '避開一個生肖']], state.zodiacMode)}</fieldset>`;
+      if (key === 'zodiac') content = `<h4 id="guided-good-step-title" tabindex="-1">選擇要避開的生肖</h4><label for="guided-good-zodiac">生肖</label><select id="guided-good-zodiac">${zodiacNames.map((name) => `<option value="${name}"${name === state.zodiac ? ' selected' : ''}>${name}</option>`).join('')}</select>`;
+      if (key === 'summary') content = `<h4 id="guided-good-step-title" tabindex="-1">確認擇日條件</h4><p class="guided-summary">${escapeHtml(summaryText())}</p><div class="guided-actions"><button id="guided-good-run" class="primary-button" type="button">搜尋好日子</button><button id="guided-good-restart" class="back-button" type="button">重新選擇</button></div>`;
+      const previous = state.step > 0 && key !== 'summary' ? '<button class="back-button" type="button" data-guided-good-action="previous">上一步</button>' : '';
+      const next = key !== 'summary' ? '<button class="primary-button" type="submit">下一步</button>' : '';
+      stepArea.innerHTML = key === 'summary' ? content : `<form id="guided-good-current-form">${content}<div class="guided-actions">${previous}${next}</div></form>`;
+      window.setTimeout(() => $('guided-good-step-title')?.focus({ preventScroll: false }), 0);
+    };
+    const collect = () => {
+      const key = steps()[state.step];
+      if (key === 'event') state.event = $('guided-good-event').value;
+      if (key === 'range') state.range = $('guided-good-range').value;
+      if (key === 'customRange') {
+        const start = $('guided-good-start'), end = $('guided-good-end');
+        if (!validDateDigits(start.value)) { start.setCustomValidity('請輸入正確的八位數開始日期，例如20260801'); start.reportValidity(); return false; }
+        start.setCustomValidity('');
+        if (!validDateDigits(end.value) || end.value < start.value) { end.setCustomValidity('結束日期必須正確，而且不能早於開始日期'); end.reportValidity(); return false; }
+        end.setCustomValidity(''); state.customStart = start.value; state.customEnd = end.value;
+      }
+      if (key === 'weekdayMode') {
+        state.weekdayMode = stepArea.querySelector('[name="guided-weekday-mode"]:checked').value;
+        if (state.weekdayMode === 'all') state.weekdays = ['0', '1', '2', '3', '4', '5', '6'];
+        if (state.weekdayMode === 'weekday') state.weekdays = ['1', '2', '3', '4', '5'];
+        if (state.weekdayMode === 'weekend') state.weekdays = ['0', '6'];
+      }
+      if (key === 'weekdays') {
+        const selected = [...stepArea.querySelectorAll('[name="guided-weekday"]:checked')].map((input) => input.value);
+        if (!selected.length) { progress.textContent = '請至少選擇一個星期'; stepArea.querySelector('[name="guided-weekday"]')?.focus({ preventScroll: false }); return false; }
+        state.weekdays = selected;
+      }
+      if (key === 'period') state.period = stepArea.querySelector('[name="guided-period"]:checked').value;
+      if (key === 'zodiacMode') state.zodiacMode = stepArea.querySelector('[name="guided-zodiac-mode"]:checked').value;
+      if (key === 'zodiac') state.zodiac = $('guided-good-zodiac').value;
+      return true;
+    };
+    const closeGuided = () => { panel.hidden = true; classic.hidden = false; toggle.hidden = false; toggle.setAttribute('aria-expanded', 'false'); toggle.focus({ preventScroll: false }); };
+    toggle.addEventListener('click', () => { toggle.hidden = true; classic.hidden = true; panel.hidden = false; toggle.setAttribute('aria-expanded', 'true'); $('good-day-result').innerHTML = ''; state.step = 0; render(); });
+    close.addEventListener('click', closeGuided);
+    stepArea.addEventListener('submit', (event) => { event.preventDefault(); if (!collect()) return; state.step += 1; render(); });
+    stepArea.addEventListener('focusin', (event) => { if (event.target.matches('#guided-good-start,#guided-good-end')) event.target.select(); });
+    stepArea.addEventListener('click', (event) => {
+      if (event.target.closest('[data-guided-good-action="previous"]')) { state.step -= 1; render(); return; }
+      if (event.target.closest('#guided-good-restart')) { $('good-day-result').innerHTML = ''; state.step = 0; render(); return; }
+      if (!event.target.closest('#guided-good-run')) return;
+      $('event-type').value = state.event;
+      $('range-type').value = state.range;
+      $('custom-range').hidden = state.range !== 'custom';
+      if (state.range === 'custom') { $('custom-start').value = digitsToIso(state.customStart); $('custom-end').value = digitsToIso(state.customEnd); }
+      document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = state.weekdays.includes(input.value); });
+      $('period').value = state.period;
+      $('zodiac').value = state.zodiacMode === 'avoid' ? state.zodiac : '';
+      $('avoid-clash').checked = state.zodiacMode === 'avoid';
+      $('good-day-form').requestSubmit();
+    });
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }
@@ -496,7 +600,7 @@
       return voice;
     };
     addButton('solar-form', 'lookup', '開始語音查詢', 'lookup-voice-anchor');
-    addButton('good-day-form', 'good-day', '開始語音找好日子');
+    addButton('good-day-form', 'good-day', '開始語音找好日子', 'good-day-voice-anchor');
     const releaseMicrophone = () => {
       invalidateRecognition();
       if (!activeVoice) return;
@@ -556,7 +660,7 @@
   }
 
   document.addEventListener('click', (event) => { const button = event.target.closest('[data-go]'); if (button) navigate(button.dataset.go); });
-  populate(); initLookup(); initGuidedDateEntry(); initGoodDays(); initMicrophoneSetup(); initVoice();
+  populate(); initLookup(); initGuidedDateEntry(); initGoodDays(); initGuidedGoodDays(); initMicrophoneSetup(); initVoice();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   let deferred; window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); deferred = event; $('install-button').hidden = false; $('install-button').onclick = async () => { deferred.prompt(); deferred = null; $('install-button').hidden = true; }; });
   if (!lunarLoaded()) setTimeout(() => announce('農曆套件尚未載入；請確認網路連線後重新整理。'), 300);

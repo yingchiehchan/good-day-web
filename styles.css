@@ -27,8 +27,8 @@ form,.result-area { display:grid; gap:15px; } fieldset { border:1px solid var(--
 .guided-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
 .guided-heading h3 { margin:0; }
 .guided-progress { color:var(--muted); margin:10px 0; }
-#guided-step form { display:grid; gap:14px; }
-#guided-step fieldset { margin:0; }
+.guided-step form,#guided-step form { display:grid; gap:14px; }
+.guided-step fieldset,#guided-step fieldset { margin:0; }
 .guided-choice { display:flex; align-items:center; gap:10px; min-height:44px; font-weight:500; }
 .guided-choice input { width:22px; height:22px; }
 .guided-actions { display:flex; flex-wrap:wrap; gap:10px; }
