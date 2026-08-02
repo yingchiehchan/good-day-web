@@ -89,7 +89,7 @@
     const roc = text.includes('民國') || text.includes('中華民國');
     const year = roc ? inputYear + 1911 : inputYear;
     const [hour, minute] = parseTime(text);
-    return { year, inputYear, month, day, hour, minute, roc, lunar: /農曆|陰曆|老黃曆/.test(text) };
+    return { year, inputYear, month, day, hour, minute, roc, lunar: text.includes('農曆') || text.includes('陰曆') || text.includes('老黃曆') };
   }
 
   function solarFromLunar(query) {
@@ -317,7 +317,6 @@
       voice.status.textContent = '';
       voice.succeeded = false;
       voice.restarting = true;
-      voice.recoveryCount = 0;
       invalidateRecognition();
       // Let Safari release the previous audio session before creating a new
       // recognizer. The old recognizer is no longer allowed to update the UI.
@@ -325,36 +324,6 @@
     };
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
-      if (voice.needsWarmup && !voice.warmingUp) {
-        voice.warmingUp = true;
-        voice.needsWarmup = false;
-        voice.startButton.textContent = '停止語音輸入';
-        voice.startButton.setAttribute('aria-label', '停止語音輸入');
-        voice.startButton.setAttribute('aria-pressed', 'true');
-        const warmup = new Speech();
-        let finished = false;
-        const finishWarmup = () => {
-          if (finished) return;
-          finished = true;
-          warmup.onstart = null;
-          warmup.onend = null;
-          warmup.onerror = null;
-          try { warmup.abort(); } catch (_) {}
-          voice.warmingUp = false;
-          window.setTimeout(() => start(voice), 450);
-        };
-        warmup.lang = 'zh-TW';
-        warmup.continuous = false;
-        warmup.interimResults = false;
-        warmup.onstart = () => window.setTimeout(() => { try { warmup.stop(); } catch (_) { finishWarmup(); } }, 250);
-        warmup.onend = finishWarmup;
-        warmup.onerror = finishWarmup;
-        try {
-          warmup.start();
-          window.setTimeout(finishWarmup, 1100);
-        } catch (_) { finishWarmup(); }
-        return;
-      }
       const session = ++voiceSession;
       activeVoice = voice;
       voice.pending = '';
@@ -386,7 +355,6 @@
         voice.status.textContent = '辨識完成';
         voice.pending = text;
         voice.succeeded = true;
-        voice.needsWarmup = true;
         voice.status.setAttribute('aria-live', 'off');
         voice.status.textContent = '';
         const confirmButton = voice.confirm.querySelector('.voice-confirm');
@@ -416,14 +384,6 @@
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        const failedWithoutResult = !voice.pending && (voice.status.textContent.includes('失敗') || voice.status.textContent.includes('沒有') || voice.status.textContent.includes('無法'));
-        if (failedWithoutResult && voice.recoveryCount < 1) {
-          voice.recoveryCount += 1;
-          voice.restarting = true;
-          voice.status.textContent = '';
-          window.setTimeout(() => start(voice), 700);
-          return;
-        }
         if (voice.pending) {
           const confirmButton = voice.confirm.querySelector('.voice-confirm');
           const readingDelay = Math.max(5000, Math.min(12000, voice.pending.length * 260 + 3000));
@@ -443,8 +403,8 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false, recoveryCount: 0, needsWarmup: false, warmingUp: false };
-      voice.startButton.addEventListener('click', () => { voice.recoveryCount = 0; start(voice); });
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false };
+      voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
       voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
