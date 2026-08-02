@@ -80,6 +80,12 @@
     return total + current;
   }
 
+  function isRocSpokenYear(text, inputYear) {
+    const explicitRoc = text.includes('民國') || text.includes('中華民國');
+    const explicitWestern = text.includes('西元') || text.includes('公元');
+    return explicitRoc || (!explicitWestern && inputYear < 1000);
+  }
+
   function parseSpokenDate(text) {
     const dateMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*[日號号]?/);
     if (!dateMatch) return null;
@@ -87,9 +93,7 @@
     const month = chineseNumber(dateMatch[2]);
     const day = chineseNumber(dateMatch[3]);
     if (!inputYear || !month || !day) return null;
-    const explicitRoc = text.includes('民國') || text.includes('中華民國');
-    const explicitWestern = text.includes('西元') || text.includes('公元');
-    const roc = explicitRoc || (!explicitWestern && inputYear < 1000);
+    const roc = isRocSpokenYear(text, inputYear);
     const year = roc ? inputYear + 1911 : inputYear;
     const [hour, minute] = parseTime(text);
     return { year, inputYear, month, day, hour, minute, roc, lunar: text.includes('農曆') || text.includes('陰曆') || text.includes('老黃曆') };
@@ -395,20 +399,31 @@
     });
   }
   function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
+  function setGoodDayMonthRange(year, month) {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || year < 1900 || year > 2100 || month < 1 || month > 12) return false;
+    const endYear = month === 12 ? year + 1 : year;
+    const endMonth = month === 12 ? 1 : month + 1;
+    $('range-type').value = 'custom';
+    $('custom-range').hidden = false;
+    $('custom-start').value = `${year}-${String(month).padStart(2, '0')}-01`;
+    $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+    return true;
+  }
   function fillGoodDayFromSpeech(text, autoSubmit = true) {
-    if (/今年|明年|後年/.test(text)) {
+    const absoluteMonthMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月/);
+    if (absoluteMonthMatch) {
+      const inputYear = chineseNumber(absoluteMonthMatch[1]);
+      const month = chineseNumber(absoluteMonthMatch[2]);
+      const year = isRocSpokenYear(text, inputYear) ? inputYear + 1911 : inputYear;
+      setGoodDayMonthRange(year, month);
+    } else if (/今年|明年|後年/.test(text)) {
       const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/);
       if (monthMatch) {
         const names = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 };
         const month = Number(monthMatch[1]) || names[monthMatch[1]];
         const now = new Date();
         const targetYear = text.includes('明年') ? now.getFullYear() + 1 : text.includes('後年') ? now.getFullYear() + 2 : now.getFullYear();
-        const endYear = month === 12 ? targetYear + 1 : targetYear;
-        const endMonth = month === 12 ? 1 : month + 1;
-        $('range-type').value = 'custom';
-        $('custom-range').hidden = false;
-        $('custom-start').value = `${targetYear}-${String(month).padStart(2, '0')}-01`;
-        $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+        setGoodDayMonthRange(targetYear, month);
       }
     }
     const found = events.find(([key, label]) => text.includes(label.split(/[／或]/)[0]));
