@@ -325,6 +325,13 @@
     const start = (voice) => {
       if (recognition) {
         const previousRecognition = recognition;
+        if (activeVoice === voice && (voice.recording || voice.startButton.textContent === '停止語音輸入')) {
+          voice.restarting = false;
+          voice.startButton.textContent = '正在結束語音輸入';
+          voice.startButton.setAttribute('aria-label', '正在結束語音輸入');
+          try { previousRecognition.stop(); } catch (_) { try { previousRecognition.abort(); } catch (_) {} }
+          return;
+        }
         voice.restarting = true;
         voice.startButton.textContent = '正在結束語音輸入';
         voice.startButton.setAttribute('aria-label', '正在結束語音輸入');
