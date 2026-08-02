@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.46</p>
+      <p class="app-version">版本 v2.47 試用版</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -41,35 +41,44 @@
     <section id="lookup-panel" class="panel" aria-labelledby="lookup-title" tabindex="-1" hidden>
       <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="lookup-title" tabindex="-1">日期查詢</h2></div>
       <div id="lookup-voice-anchor"></div>
-      <div class="segmented" role="group" aria-label="選擇曆法">
-        <button class="segment active" data-calendar="solar" aria-pressed="true">國曆</button>
-        <button class="segment" data-calendar="lunar" aria-pressed="false">農曆</button>
+      <button id="guided-toggle" class="guided-toggle" type="button" aria-expanded="false" aria-controls="guided-date-entry">試用逐項選擇日期</button>
+      <section id="guided-date-entry" class="guided-entry" aria-labelledby="guided-title" hidden>
+        <div class="guided-heading"><h3 id="guided-title" tabindex="-1">逐項選擇日期</h3><button id="guided-close" class="back-button" type="button">改用原有輸入方式</button></div>
+        <p id="guided-progress" class="guided-progress" aria-live="polite"></p>
+        <div id="guided-step"></div>
+      </section>
+
+      <div id="classic-date-entry">
+        <div class="segmented" role="group" aria-label="選擇曆法">
+          <button class="segment active" data-calendar="solar" aria-pressed="true">國曆</button>
+          <button class="segment" data-calendar="lunar" aria-pressed="false">農曆</button>
+        </div>
+
+        <form id="solar-form" class="date-form">
+          <fieldset><legend>國曆日期</legend>
+            <label>民國或西元年份<input id="solar-year" type="number" min="1" max="3000" required></label>
+            <p class="help-text">請輸入西元年，例如 2026；也可在下方勾選民國年份。</p>
+            <label class="check-label"><input id="solar-roc" type="checkbox"> 這是民國年份</label>
+            <label>月份<input id="solar-month" type="number" min="1" max="12" required></label>
+            <label>日期<input id="solar-day" type="number" min="1" max="31" required></label>
+          </fieldset>
+          <label>時間<input id="solar-time" type="time" value="12:00"></label>
+          <button class="primary-button" type="submit">轉換並查看完整資料</button>
+        </form>
+
+        <form id="lunar-form" class="date-form" hidden>
+          <fieldset><legend>農曆日期</legend>
+            <label>民國或西元年份<input id="lunar-year" type="number" min="1" max="3000" required></label>
+            <p class="help-text">請輸入西元年，例如 2026；也可在下方勾選民國年份。</p>
+            <label class="check-label"><input id="lunar-roc" type="checkbox"> 這是民國年份</label>
+            <label>月份<input id="lunar-month" type="number" min="1" max="12" required></label>
+            <label>日期<input id="lunar-day" type="number" min="1" max="30" required></label>
+            <label class="check-label"><input id="lunar-leap" type="checkbox"> 閏月</label>
+          </fieldset>
+          <label>時間<input id="lunar-time" type="time" value="12:00"></label>
+          <button class="primary-button" type="submit">轉換並查看完整資料</button>
+        </form>
       </div>
-
-      <form id="solar-form" class="date-form">
-        <fieldset><legend>國曆日期</legend>
-          <label>民國或西元年份<input id="solar-year" type="number" min="1" max="3000" required></label>
-          <p class="help-text">請輸入西元年，例如 2026；也可在下方勾選民國年份。</p>
-          <label class="check-label"><input id="solar-roc" type="checkbox"> 這是民國年份</label>
-          <label>月份<input id="solar-month" type="number" min="1" max="12" required></label>
-          <label>日期<input id="solar-day" type="number" min="1" max="31" required></label>
-        </fieldset>
-        <label>時間<input id="solar-time" type="time" value="12:00"></label>
-        <button class="primary-button" type="submit">轉換並查看完整資料</button>
-      </form>
-
-      <form id="lunar-form" class="date-form" hidden>
-        <fieldset><legend>農曆日期</legend>
-          <label>民國或西元年份<input id="lunar-year" type="number" min="1" max="3000" required></label>
-          <p class="help-text">請輸入西元年，例如 2026；也可在下方勾選民國年份。</p>
-          <label class="check-label"><input id="lunar-roc" type="checkbox"> 這是民國年份</label>
-          <label>月份<input id="lunar-month" type="number" min="1" max="12" required></label>
-          <label>日期<input id="lunar-day" type="number" min="1" max="30" required></label>
-          <label class="check-label"><input id="lunar-leap" type="checkbox"> 閏月</label>
-        </fieldset>
-        <label>時間<input id="lunar-time" type="time" value="12:00"></label>
-        <button class="primary-button" type="submit">轉換並查看完整資料</button>
-      </form>
       <div id="lookup-result" class="result-area" aria-live="polite"></div>
       <div class="panel-footer"><button class="back-button" data-go="home-panel">回首頁</button></div>
     </section>
@@ -108,6 +117,6 @@
   <div id="navigation-announcement" class="sr-only" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260802-v246-spoken-clock-time" defer></script>
+  <script src="app.js?v=20260802-v247-guided-entry" defer></script>
 </body>
 </html>

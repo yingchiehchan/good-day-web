@@ -221,6 +221,88 @@
     $('lunar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('lunar-time').value.split(':').map(Number); const yearInput = Number($('lunar-year').value); const query = { year: $('lunar-roc').checked ? yearInput + 1911 : yearInput, month: Number($('lunar-month').value), day: Number($('lunar-day').value), hour, minute }; try { showLookupResult(renderDay(makeDay(solarFromLunar(query)))); } catch (error) { announce('無法轉換這個農曆日期，請檢查日期或閏月設定。'); } });
   }
 
+  function initGuidedDateEntry() {
+    const toggle = $('guided-toggle'), panel = $('guided-date-entry'), close = $('guided-close'), classic = $('classic-date-entry'), stepArea = $('guided-step'), progress = $('guided-progress');
+    if (!toggle || !panel || !close || !classic || !stepArea || !progress) return;
+    const now = currentSolar();
+    const branches = [['0', '子時'], ['2', '丑時'], ['4', '寅時'], ['6', '卯時'], ['8', '辰時'], ['10', '巳時'], ['12', '午時'], ['14', '未時'], ['16', '申時'], ['18', '酉時'], ['20', '戌時'], ['22', '亥時']];
+    const state = { calendar: 'solar', era: 'western', year: now.year, month: now.month, day: now.day, leap: false, timeMode: 'clock', hour: 12, minute: 0, step: 0 };
+    const steps = () => ['calendar', 'era', 'year', 'month', ...(state.calendar === 'lunar' ? ['leap'] : []), 'day', 'timeMode', 'time', 'summary'];
+    const options = (start, end, selected, suffix) => Array.from({ length: end - start + 1 }, (_, index) => {
+      const value = start + index;
+      return `<option value="${value}"${value === selected ? ' selected' : ''}>${value}${suffix}</option>`;
+    }).join('');
+    const westernYear = () => state.era === 'roc' ? state.year + 1911 : state.year;
+    const maxDay = () => state.calendar === 'lunar' ? 30 : new Date(westernYear(), state.month, 0).getDate();
+    const summaryText = () => {
+      const calendarName = state.calendar === 'lunar' ? '農曆' : '國曆';
+      const yearName = state.era === 'roc' ? `民國${state.year}年` : `西元${state.year}年`;
+      const leapName = state.calendar === 'lunar' && state.leap ? '閏月，' : '';
+      const branch = branches.find(([hour]) => Number(hour) === state.hour)?.[1];
+      const timeName = state.timeMode === 'branch' ? branch : `${String(state.hour).padStart(2, '0')}時${String(state.minute).padStart(2, '0')}分`;
+      return `${calendarName}，${yearName}，${leapName}${state.month}月${state.day}日，${timeName}`;
+    };
+    const render = () => {
+      const currentSteps = steps();
+      state.step = Math.max(0, Math.min(state.step, currentSteps.length - 1));
+      const key = currentSteps[state.step];
+      progress.textContent = `第 ${state.step + 1} 步，共 ${currentSteps.length} 步`;
+      let content = '';
+      if (key === 'calendar') content = `<h4 id="guided-step-title" tabindex="-1">選擇曆法</h4><fieldset><legend>日期使用哪一種曆法</legend><label class="guided-choice"><input type="radio" name="guided-calendar" value="solar"${state.calendar === 'solar' ? ' checked' : ''}> 國曆</label><label class="guided-choice"><input type="radio" name="guided-calendar" value="lunar"${state.calendar === 'lunar' ? ' checked' : ''}> 農曆</label></fieldset>`;
+      if (key === 'era') content = `<h4 id="guided-step-title" tabindex="-1">選擇年份制度</h4><fieldset><legend>年份使用哪一種制度</legend><label class="guided-choice"><input type="radio" name="guided-era" value="western"${state.era === 'western' ? ' checked' : ''}> 西元</label><label class="guided-choice"><input type="radio" name="guided-era" value="roc"${state.era === 'roc' ? ' checked' : ''}> 民國</label></fieldset>`;
+      if (key === 'year') content = `<h4 id="guided-step-title" tabindex="-1">輸入年份</h4><label for="guided-year">${state.era === 'roc' ? '民國年份' : '西元年份'}</label><input id="guided-year" type="number" inputmode="numeric" min="1" max="3000" value="${state.year}" required>`;
+      if (key === 'month') content = `<h4 id="guided-step-title" tabindex="-1">選擇月份</h4><label for="guided-month">月份</label><select id="guided-month">${options(1, 12, state.month, '月')}</select>`;
+      if (key === 'leap') content = `<h4 id="guided-step-title" tabindex="-1">選擇一般月份或閏月</h4><fieldset><legend>月份類型</legend><label class="guided-choice"><input type="radio" name="guided-leap" value="no"${state.leap ? '' : ' checked'}> 一般月份</label><label class="guided-choice"><input type="radio" name="guided-leap" value="yes"${state.leap ? ' checked' : ''}> 閏月</label></fieldset>`;
+      if (key === 'day') {
+        state.day = Math.min(state.day, maxDay());
+        content = `<h4 id="guided-step-title" tabindex="-1">選擇日期</h4><label for="guided-day">日期</label><select id="guided-day">${options(1, maxDay(), state.day, '日')}</select>`;
+      }
+      if (key === 'timeMode') content = `<h4 id="guided-step-title" tabindex="-1">選擇時間輸入方式</h4><fieldset><legend>時間類型</legend><label class="guided-choice"><input type="radio" name="guided-time-mode" value="clock"${state.timeMode === 'clock' ? ' checked' : ''}> 一般時間</label><label class="guided-choice"><input type="radio" name="guided-time-mode" value="branch"${state.timeMode === 'branch' ? ' checked' : ''}> 傳統時辰</label></fieldset>`;
+      if (key === 'time' && state.timeMode === 'clock') content = `<h4 id="guided-step-title" tabindex="-1">選擇時間</h4><label for="guided-hour">小時</label><select id="guided-hour">${options(0, 23, state.hour, '時')}</select><label for="guided-minute">分鐘</label><select id="guided-minute">${options(0, 59, state.minute, '分')}</select>`;
+      if (key === 'time' && state.timeMode === 'branch') content = `<h4 id="guided-step-title" tabindex="-1">選擇傳統時辰</h4><label for="guided-branch">時辰</label><select id="guided-branch">${branches.map(([hour, name]) => `<option value="${hour}"${Number(hour) === state.hour ? ' selected' : ''}>${name}</option>`).join('')}</select>`;
+      if (key === 'summary') content = `<h4 id="guided-step-title" tabindex="-1">確認日期</h4><p class="guided-summary">${escapeHtml(summaryText())}</p><div class="guided-actions"><button id="guided-run" class="primary-button" type="button">開始查詢</button><button id="guided-restart" class="back-button" type="button">重新選擇</button></div>`;
+      const previous = state.step > 0 && key !== 'summary' ? '<button class="back-button" type="button" data-guided-action="previous">上一步</button>' : '';
+      const next = key !== 'summary' ? '<button class="primary-button" type="submit">下一步</button>' : '';
+      stepArea.innerHTML = key === 'summary' ? content : `<form id="guided-current-form">${content}<div class="guided-actions">${previous}${next}</div></form>`;
+      window.setTimeout(() => $('guided-step-title')?.focus({ preventScroll: false }), 0);
+    };
+    const collect = () => {
+      const key = steps()[state.step];
+      if (key === 'calendar') state.calendar = stepArea.querySelector('[name="guided-calendar"]:checked').value;
+      if (key === 'era') {
+        const nextEra = stepArea.querySelector('[name="guided-era"]:checked').value;
+        if (nextEra !== state.era) state.year = nextEra === 'roc' && state.year >= 1912 ? state.year - 1911 : nextEra === 'western' && state.year < 1000 ? state.year + 1911 : state.year;
+        state.era = nextEra;
+      }
+      if (key === 'year') state.year = Number($('guided-year').value);
+      if (key === 'month') state.month = Number($('guided-month').value);
+      if (key === 'leap') state.leap = stepArea.querySelector('[name="guided-leap"]:checked').value === 'yes';
+      if (key === 'day') state.day = Number($('guided-day').value);
+      if (key === 'timeMode') state.timeMode = stepArea.querySelector('[name="guided-time-mode"]:checked').value;
+      if (key === 'time' && state.timeMode === 'clock') { state.hour = Number($('guided-hour').value); state.minute = Number($('guided-minute').value); }
+      if (key === 'time' && state.timeMode === 'branch') { state.hour = Number($('guided-branch').value); state.minute = 0; }
+    };
+    const closeGuided = () => { panel.hidden = true; classic.hidden = false; toggle.hidden = false; toggle.setAttribute('aria-expanded', 'false'); toggle.focus({ preventScroll: false }); };
+    toggle.addEventListener('click', () => { toggle.hidden = true; classic.hidden = true; panel.hidden = false; toggle.setAttribute('aria-expanded', 'true'); $('lookup-result').innerHTML = ''; state.step = 0; render(); });
+    close.addEventListener('click', closeGuided);
+    stepArea.addEventListener('submit', (event) => { event.preventDefault(); collect(); state.step += 1; render(); });
+    stepArea.addEventListener('click', (event) => {
+      const previous = event.target.closest('[data-guided-action="previous"]');
+      if (previous) { state.step -= 1; render(); return; }
+      if (event.target.closest('#guided-restart')) { $('lookup-result').innerHTML = ''; state.step = 0; render(); return; }
+      if (!event.target.closest('#guided-run')) return;
+      const prefix = state.calendar === 'lunar' ? 'lunar' : 'solar';
+      document.querySelector(`[data-calendar="${state.calendar}"]`).click();
+      $(`${prefix}-year`).value = state.year;
+      $(`${prefix}-month`).value = state.month;
+      $(`${prefix}-day`).value = state.day;
+      $(`${prefix}-roc`).checked = state.era === 'roc';
+      if (state.calendar === 'lunar') $('lunar-leap').checked = state.leap;
+      $(`${prefix}-time`).value = `${String(state.hour).padStart(2, '0')}:${String(state.minute).padStart(2, '0')}`;
+      document.querySelector(`#${prefix}-form`).requestSubmit();
+    });
+  }
+
   function rangeDates(type) {
     const start = new Date(); start.setHours(12, 0, 0, 0); let end = new Date(start);
     if (type === 'next7') { start.setDate(start.getDate() + 1); end.setDate(end.getDate() + 8); }
@@ -474,7 +556,7 @@
   }
 
   document.addEventListener('click', (event) => { const button = event.target.closest('[data-go]'); if (button) navigate(button.dataset.go); });
-  populate(); initLookup(); initGoodDays(); initMicrophoneSetup(); initVoice();
+  populate(); initLookup(); initGuidedDateEntry(); initGoodDays(); initMicrophoneSetup(); initVoice();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   let deferred; window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); deferred = event; $('install-button').hidden = false; $('install-button').onclick = async () => { deferred.prompt(); deferred = null; $('install-button').hidden = true; }; });
   if (!lunarLoaded()) setTimeout(() => announce('農曆套件尚未載入；請確認網路連線後重新整理。'), 300);

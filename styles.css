@@ -22,5 +22,16 @@ form,.result-area { display:grid; gap:15px; } fieldset { border:1px solid var(--
 .voice-transcript { padding:10px; background:#fff; border-radius:8px; }
 .voice-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .voice-actions[hidden] { display:none; }
+.guided-toggle { width:100%; margin:16px 0; border:1px solid var(--brand); border-radius:12px; padding:13px 16px; background:#fff; color:var(--brand-dark); font:inherit; font-weight:700; cursor:pointer; }
+.guided-entry { margin:16px 0; padding:16px; border:2px solid var(--brand); border-radius:14px; background:#fff; }
+.guided-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
+.guided-heading h3 { margin:0; }
+.guided-progress { color:var(--muted); margin:10px 0; }
+#guided-step form { display:grid; gap:14px; }
+#guided-step fieldset { margin:0; }
+.guided-choice { display:flex; align-items:center; gap:10px; min-height:44px; font-weight:500; }
+.guided-choice input { width:22px; height:22px; }
+.guided-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.guided-summary { padding:14px; border-radius:12px; background:var(--soft); }
 @media (max-width:600px) { .site-header { padding:18px; } main { padding:20px 14px; } .date-form fieldset { grid-template-columns:1fr; } .checkbox-grid { grid-template-columns:repeat(2,1fr); } .result-card dl { grid-template-columns:5.5rem 1fr; } }
 @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; transition:none !important; } }
