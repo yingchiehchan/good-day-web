@@ -72,11 +72,22 @@
     if (/(?:日|號|号)(?:40|四十)(?:時|时|點|点|石)?$/.test(compactText)) return [10, 0];
     if (/(?:日|號|号)(?:50|五十)(?:時|时|點|点)?$/.test(compactText)) return [12, 0];
     for (const [name, hour] of Object.entries(branch)) if (spokenBranches[name].some((alias) => compactText.includes(alias))) return [hour, 0];
-    const match = text.match(/(\d{1,2})\s*(?:點|时|時|:|：)\s*(\d{1,2})?/);
+    const match = compactText.match(/([0-9零〇一二兩三四五六七八九十]{1,3})(?:點|点|时|時|:|：)(半|一刻|三刻|[0-9零〇一二兩三四五六七八九十]{1,3})?(?:分)?/);
     if (match) {
-      let hour = Math.min(23, Number(match[1]));
-      if (/下午|午後/.test(text) && hour >= 1 && hour <= 11) hour += 12;
-      return [hour, Math.min(59, Number(match[2] || 0))];
+      let hour = chineseNumber(match[1]);
+      if (hour === null || hour > 23) return [12, 0];
+      let minute = 0;
+      if (match[2] === '半') minute = 30;
+      else if (match[2] === '一刻') minute = 15;
+      else if (match[2] === '三刻') minute = 45;
+      else if (match[2]) minute = chineseNumber(match[2]);
+      if (minute === null || minute > 59) return [12, 0];
+      const isEvening = /晚上|晚間/.test(text);
+      const isAfternoon = /下午|午後|傍晚/.test(text);
+      const isMorning = /上午|早上|清晨|凌晨|午夜/.test(text);
+      if ((isAfternoon || isEvening) && hour >= 1 && hour <= 11) hour += 12;
+      else if ((isMorning || isEvening) && hour === 12) hour = 0;
+      return [hour, minute];
     }
     const fallback = text.match(/日\s*(?:50|五十)\s*$/);
     return fallback ? [12, 0] : [12, 0];
