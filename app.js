@@ -307,7 +307,7 @@
       voice.retry.hidden = true;
       voice.succeeded = true;
       if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
-      else fillGoodDayFromSpeech(voice.pending, false);
+      else fillGoodDayFromSpeech(voice.pending, true);
       voice.confirm.hidden = true;
     };
     const retryVoice = (voice) => {
@@ -383,7 +383,13 @@
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (!voice.pending && !voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
+        if (voice.pending) {
+          const confirmButton = voice.confirm.querySelector('.voice-confirm');
+          window.setTimeout(() => {
+            voice.transcript.focus({ preventScroll: false });
+            window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 1800);
+          }, 0);
+        } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
       };
       try {
         recognition.start();
