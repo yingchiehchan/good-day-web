@@ -363,7 +363,9 @@
         voice.transcript.setAttribute('aria-live', 'assertive');
         voice.transcript.setAttribute('aria-atomic', 'true');
         voice.transcript.setAttribute('aria-label', `我聽到的是：${text}`);
+        voice.transcript.setAttribute('role', 'alert');
         confirmButton.setAttribute('aria-label', '對，開始查詢');
+        try { recognition.stop(); } catch (_) { try { recognition.abort(); } catch (_) {} }
       };
       recognition.onerror = (event) => {
         if (session !== voiceSession) return;
@@ -385,10 +387,10 @@
         voice.startButton.setAttribute('aria-pressed', 'false');
         if (voice.pending) {
           const confirmButton = voice.confirm.querySelector('.voice-confirm');
+          const readingDelay = Math.max(2200, Math.min(7000, voice.pending.length * 180 + 1000));
           window.setTimeout(() => {
-            voice.transcript.focus({ preventScroll: false });
-            window.setTimeout(() => confirmButton.focus({ preventScroll: false }), 1800);
-          }, 0);
+            confirmButton.focus({ preventScroll: false });
+          }, readingDelay);
         } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
       };
       try {
