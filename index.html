@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.39</p>
+      <p class="app-version">版本 v2.40</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -59,7 +59,7 @@
 
       <form id="lunar-form" class="date-form" hidden>
         <fieldset><legend>農曆日期</legend>
-          <label>民國或西元年份<input id="lunar-year" type="number" min="1900" max="2100" required></label>
+          <label>民國或西元年份<input id="lunar-year" type="number" min="1" max="3000" required></label>
           <p class="help-text">請輸入西元年，例如 2026；也可在下方勾選民國年份。</p>
           <label class="check-label"><input id="lunar-roc" type="checkbox"> 這是民國年份</label>
           <label>月份<input id="lunar-month" type="number" min="1" max="12" required></label>
@@ -88,7 +88,7 @@
         <label class="check-label"><input id="avoid-clash" type="checkbox" checked> 避開相沖</label>
         <button class="primary-button" type="submit">搜尋好日子</button>
       </form>
-      <div id="good-day-result" class="result-area" aria-live="polite"></div>
+      <div id="good-day-result" class="result-area"></div>
     </section>
 
     <section id="about-panel" class="panel about-panel" aria-labelledby="about-title" tabindex="-1" hidden>
@@ -110,6 +110,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260802-v239-audio-release" defer></script>
+  <script src="app.js?v=20260802-v240-voice-results" defer></script>
 </body>
 </html>

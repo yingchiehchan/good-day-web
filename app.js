@@ -22,7 +22,7 @@
     let text = String(value);
     const map = [['入宅', '入厝、入宅'], ['移徙', '搬家、移徙'], ['嫁娶', '結婚、嫁娶'], ['開市', '開市、開幕'], ['立券', '簽約、立券'], ['修造', '修繕、修造'], ['出行', '出門、出行'], ['求醫', '就醫、求醫'], ['求嗣', '求子、求嗣'], ['納采', '訂婚、納采'], ['雞', '雞'], ['龍', '龍']];
     map.forEach(([from, to]) => { text = text.split(from).join(to); });
-    const simplifiedToTraditional = { 馬: '馬', 龙: '龍', 马: '馬', 鸡: '雞', 盖: '蓋', 竖: '豎', 车: '車', 农: '農', 历: '曆', 阳: '陽', 阴: '陰', 节: '節', 气: '氣', 岁: '歲', 时: '時', 间: '間', 点: '點', 国: '國', 问: '問', 听: '聽', 说: '說', 对: '對', 错: '錯', 这: '這', 个: '個', 数: '數', 据: '據', 无: '無', 资: '資', 料: '料', 开: '開', 询: '詢', 查: '查', 结: '結', 习: '習', 记: '記', 录: '錄', 识: '識', 语: '語', 读: '讀', 写: '寫', 转: '轉', 换: '換', 认: '認', 证: '證', 进: '進', 杀: '殺', 复: '復', 现: '現', 过: '過', 还: '還', 让: '讓', 发: '發', 诉: '訴', 选: '選', 择: '擇', 适: '適', 筛: '篩', 统: '統', 计: '計', 果: '果', 级: '級', 明: '明', 参: '參', 考: '考', 惊: '驚', 蛰: '蟄' };
+    const simplifiedToTraditional = { 馬: '馬', 龙: '龍', 马: '馬', 鸡: '雞', 猪: '豬', 盖: '蓋', 竖: '豎', 车: '車', 农: '農', 历: '曆', 阳: '陽', 阴: '陰', 节: '節', 气: '氣', 岁: '歲', 时: '時', 间: '間', 点: '點', 国: '國', 问: '問', 听: '聽', 说: '說', 对: '對', 错: '錯', 这: '這', 个: '個', 数: '數', 据: '據', 无: '無', 资: '資', 料: '料', 开: '開', 询: '詢', 查: '查', 结: '結', 习: '習', 记: '記', 录: '錄', 识: '識', 语: '語', 读: '讀', 写: '寫', 转: '轉', 换: '換', 认: '認', 证: '證', 进: '進', 杀: '殺', 复: '復', 现: '現', 过: '過', 还: '還', 让: '讓', 发: '發', 诉: '訴', 选: '選', 择: '擇', 适: '適', 筛: '篩', 统: '統', 计: '計', 果: '果', 级: '級', 明: '明', 参: '參', 考: '考', 惊: '驚', 蛰: '蟄', 处: '處', 满: '滿', 种: '種' };
     for (const [from, to] of Object.entries(simplifiedToTraditional)) text = text.split(from).join(to);
     return text;
   }
@@ -80,13 +80,15 @@
   }
 
   function parseSpokenDate(text) {
-    const dateMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,4})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*[日號号]?/);
+    const dateMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*[日號号]?/);
     if (!dateMatch) return null;
     const inputYear = chineseNumber(dateMatch[1]);
     const month = chineseNumber(dateMatch[2]);
     const day = chineseNumber(dateMatch[3]);
     if (!inputYear || !month || !day) return null;
-    const roc = text.includes('民國') || text.includes('中華民國');
+    const explicitRoc = text.includes('民國') || text.includes('中華民國');
+    const explicitWestern = text.includes('西元') || text.includes('公元');
+    const roc = explicitRoc || (!explicitWestern && inputYear < 1000);
     const year = roc ? inputYear + 1911 : inputYear;
     const [hour, minute] = parseTime(text);
     return { year, inputYear, month, day, hour, minute, roc, lunar: text.includes('農曆') || text.includes('陰曆') || text.includes('老黃曆') };
@@ -230,7 +232,7 @@
     const shown = results.slice(0, 30);
     const spokenResults = shown.slice(0, 5).map((day, index) => `第${index + 1}個，${calendar.format(day.date)}，老黃曆宜：${day.yi.join('、')}`).join('。');
     const spokenSummary = `找到 ${results.length} 個符合條件的日期。先播報前五個：${spokenResults}`;
-    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1" aria-label="${escapeHtml(spokenSummary)}">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
+    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
     area.setAttribute('tabindex', '-1');
     area.removeAttribute('aria-label');
     window.setTimeout(() => area.querySelector('.result-summary')?.focus({ preventScroll: false }), 0);
