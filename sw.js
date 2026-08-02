@@ -1,4 +1,4 @@
-const CACHE = 'good-day-web-v39';
+const CACHE = 'good-day-web-v40';
 const LOCAL = ['./', './index.html', './privacy.html', './styles.css', './app.js', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(LOCAL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
