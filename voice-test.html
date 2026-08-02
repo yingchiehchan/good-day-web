@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <title>語音診斷｜好日子</title>
+  <style>
+    :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f5f7ff; color: #182033; font-size: 1.15rem; line-height: 1.6; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 18px 80px; }
+    h1 { font-size: 2rem; line-height: 1.25; }
+    .card { margin: 18px 0; padding: 20px; border: 2px solid #c7d0ea; border-radius: 18px; background: white; }
+    button, a.button { display: inline-block; min-height: 52px; margin: 6px 8px 6px 0; padding: 12px 18px; border: 2px solid #4f46e5; border-radius: 14px; background: white; color: #3730a3; font: inherit; font-weight: 700; text-decoration: none; }
+    button.primary { background: #4f46e5; color: white; }
+    #status { min-height: 2em; font-weight: 700; }
+    #event-log { padding-left: 1.6em; }
+    #event-log li { margin: 10px 0; padding-bottom: 8px; border-bottom: 1px solid #d8deef; }
+    textarea { box-sizing: border-box; width: 100%; min-height: 220px; padding: 12px; border: 2px solid #9aa8ca; border-radius: 12px; font: inherit; }
+    .warning { color: #9a3412; font-weight: 700; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111827; color: #f3f4f6; }
+      .card, button, a.button { background: #1f2937; color: #f3f4f6; }
+      button.primary { background: #6366f1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="index.html">回好日子</a>
+    <h1>Safari 語音診斷</h1>
+    <p>診斷頁 v1。每次測試都建立新的語音辨識物件，不會自動重試。</p>
+
+    <section class="card" aria-labelledby="controls-heading">
+      <h2 id="controls-heading">開始測試</h2>
+      <button id="test-button" class="primary" type="button" aria-pressed="false">開始語音測試</button>
+      <button id="clear-button" type="button">清除紀錄</button>
+      <p id="status" role="status" aria-live="polite">尚未開始。</p>
+    </section>
+
+    <section class="card" aria-labelledby="events-heading">
+      <h2 id="events-heading">事件紀錄</h2>
+      <ol id="event-log"></ol>
+    </section>
+
+    <section class="card" aria-labelledby="copy-heading">
+      <h2 id="copy-heading">可複製的診斷結果</h2>
+      <textarea id="diagnostic-output" readonly aria-label="診斷結果"></textarea>
+      <button id="copy-button" type="button">複製診斷結果</button>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const testButton = document.getElementById('test-button');
+      const clearButton = document.getElementById('clear-button');
+      const copyButton = document.getElementById('copy-button');
+      const status = document.getElementById('status');
+      const eventLog = document.getElementById('event-log');
+      const output = document.getElementById('diagnostic-output');
+      let recognition = null;
+      let attempt = 0;
+      let events = [];
+      let audioStarted = false;
+      let audioWatchdog = null;
+
+      const timestamp = () => new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      const refreshOutput = () => {
+        output.value = [
+          '好日子 Safari 語音診斷',
+          `時間：${new Date().toLocaleString('zh-TW')}`,
+          `SpeechRecognition：${Speech ? '支援' : '不支援'}`,
+          `瀏覽器：${navigator.userAgent}`,
+          '',
+          ...events
+        ].join('\n');
+      };
+      const log = (name, detail = '') => {
+        const line = `[${timestamp()}] 第 ${attempt} 次｜${name}${detail ? `｜${detail}` : ''}`;
+        events.push(line);
+        const item = document.createElement('li');
+        item.textContent = line;
+        if (name.includes('警告') || name.includes('error')) item.className = 'warning';
+        eventLog.append(item);
+        refreshOutput();
+      };
+      const resetButton = () => {
+        testButton.textContent = '再次語音測試';
+        testButton.setAttribute('aria-label', '再次語音測試');
+        testButton.setAttribute('aria-pressed', 'false');
+      };
+
+      if (!Speech) {
+        testButton.disabled = true;
+        status.textContent = '這個瀏覽器不支援 SpeechRecognition。';
+        refreshOutput();
+        return;
+      }
+
+      testButton.addEventListener('click', () => {
+        if (recognition) {
+          log('手動停止');
+          status.textContent = '正在停止語音服務。';
+          try { recognition.stop(); } catch (_) { try { recognition.abort(); } catch (_) {} }
+          return;
+        }
+
+        attempt += 1;
+        audioStarted = false;
+        status.textContent = '正在啟動語音服務，尚未確認麥克風收音。';
+        testButton.textContent = '停止語音測試';
+        testButton.setAttribute('aria-label', '停止語音測試');
+        testButton.setAttribute('aria-pressed', 'true');
+        recognition = new Speech();
+        recognition.lang = 'zh-TW';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 3;
+
+        recognition.onstart = () => log('start', '語音服務已啟動，不代表麥克風已收音');
+        recognition.onaudiostart = () => {
+          audioStarted = true;
+          window.clearTimeout(audioWatchdog);
+          status.textContent = '麥克風已開始收音，請說話。';
+          log('audiostart', '麥克風已開始擷取音訊');
+        };
+        recognition.onsoundstart = () => log('soundstart', '偵測到聲音');
+        recognition.onspeechstart = () => log('speechstart', '偵測到語音');
+        recognition.onspeechend = () => log('speechend', '語音結束');
+        recognition.onsoundend = () => log('soundend', '聲音結束');
+        recognition.onaudioend = () => log('audioend', '麥克風停止擷取音訊');
+        recognition.onresult = (event) => {
+          const text = [...event.results].map((result) => result[0].transcript).join('');
+          status.textContent = `辨識結果：${text}`;
+          log('result', text || '結果為空');
+        };
+        recognition.onnomatch = () => {
+          status.textContent = '有收到辨識結果，但內容不符合。';
+          log('nomatch');
+        };
+        recognition.onerror = (event) => {
+          status.textContent = `語音錯誤：${event.error}`;
+          log('error', `${event.error}${event.message ? `；${event.message}` : ''}`);
+        };
+        recognition.onend = () => {
+          window.clearTimeout(audioWatchdog);
+          log('end', audioStarted ? '服務已結束，這次曾收到 audiostart' : '服務已結束，這次沒有 audiostart');
+          recognition = null;
+          resetButton();
+          if (!audioStarted) status.textContent = '這次語音服務已結束，但麥克風沒有開始收音。';
+        };
+
+        log('呼叫 start()');
+        try {
+          recognition.start();
+          audioWatchdog = window.setTimeout(() => {
+            if (recognition && !audioStarted) {
+              status.textContent = '警告：三秒後仍沒有 audiostart，麥克風尚未收音。';
+              log('警告：沒有 audiostart', '呼叫 start() 三秒後仍未開始收音');
+            }
+          }, 3000);
+        } catch (error) {
+          log('start() 例外', error.name || String(error));
+          recognition = null;
+          resetButton();
+        }
+      });
+
+      clearButton.addEventListener('click', () => {
+        events = [];
+        attempt = 0;
+        eventLog.replaceChildren();
+        status.textContent = '紀錄已清除。';
+        refreshOutput();
+      });
+
+      copyButton.addEventListener('click', async () => {
+        refreshOutput();
+        try {
+          await navigator.clipboard.writeText(output.value);
+          status.textContent = '診斷結果已複製。';
+        } catch (_) {
+          output.focus();
+          output.select();
+          status.textContent = '請使用系統的複製指令複製診斷結果。';
+        }
+      });
+
+      refreshOutput();
+    })();
+  </script>
+</body>
+</html>
