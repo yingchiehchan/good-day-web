@@ -40,19 +40,20 @@
     const branch = { 子: 0, 丑: 2, 寅: 4, 卯: 6, 辰: 8, 巳: 10, 午: 12, 未: 14, 申: 16, 酉: 18, 戌: 20, 亥: 22 };
     const compactText = text.replace(/\s+/g, '');
     const spokenBranches = {
-      子: ['子時', '子时', '紫時', '紫时'],
-      丑: ['丑時', '丑时', '醜時', '醜时'],
-      寅: ['寅時', '寅时', '銀時', '银时'],
-      卯: ['卯時', '卯时', '毛時', '毛时'],
-      辰: ['辰時', '辰时', '誠實', '诚实', '誠時', '诚时'],
-      巳: ['巳時', '巳时', '四時', '四时'],
-      午: ['午時', '午时', '五時', '五时'],
-      未: ['未時', '未时', '餵食', '喂食', '餵時', '喂时'],
-      申: ['申時', '申时', '身時', '身时', '生食', '生時', '深時'],
-      酉: ['酉時', '酉时', '有事', '有時', '有时'],
-      戌: ['戌時', '戌时', '需時', '需时', '徐時', '徐时'],
-      亥: ['亥時', '亥时', '海時', '海时', '還時', '还时']
+      子: ['子時', '子时', '紫時', '紫时', '子石', '紫石', '止石'],
+      丑: ['丑時', '丑时', '醜時', '醜时', '丑石', '醜石'],
+      寅: ['寅時', '寅时', '銀時', '银时', '寅石', '銀石', '银石', '臨時', '临时'],
+      卯: ['卯時', '卯时', '毛時', '毛时', '卯石', '毛石'],
+      辰: ['辰時', '辰时', '誠實', '诚实', '誠時', '诚时', '辰石', '誠石', '诚石'],
+      巳: ['巳時', '巳时', '四時', '四时', '巳石', '四石'],
+      午: ['午時', '午时', '五時', '五时', '午石', '五石'],
+      未: ['未時', '未时', '餵食', '喂食', '餵時', '喂时', '未石', '餵石', '喂石'],
+      申: ['申時', '申时', '身時', '身时', '生食', '生時', '深時', '申石', '身石', '生石', '深石'],
+      酉: ['酉時', '酉时', '有事', '有時', '有时', '酉石', '有石'],
+      戌: ['戌時', '戌时', '需時', '需时', '徐時', '徐时', '戌石', '需石', '徐石', '趨勢', '趋势'],
+      亥: ['亥時', '亥时', '海時', '海时', '還時', '还时', '亥石', '海石']
     };
+    if (/(?:日|號|号)(?:40|四十)(?:時|时|點|点|石)?$/.test(compactText)) return [10, 0];
     if (/(?:日|號|号)(?:50|五十)(?:時|时|點|点)?$/.test(compactText)) return [12, 0];
     for (const [name, hour] of Object.entries(branch)) if (spokenBranches[name].some((alias) => compactText.includes(alias))) return [hour, 0];
     const match = text.match(/(\d{1,2})\s*(?:點|时|時|:|：)\s*(\d{1,2})?/);
@@ -231,7 +232,8 @@
     if (!results.length) { area.innerHTML = '<div class="empty" role="alert" tabindex="-1">沒有符合條件的日期，請放寬日期、星期或生肖條件。</div>'; window.setTimeout(() => area.querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0); return; }
     const shown = results.slice(0, 30);
     const spokenResults = shown.slice(0, 5).map((day, index) => `第${index + 1}個，${calendar.format(day.date)}，老黃曆宜：${day.yi.join('、')}`).join('。');
-    const spokenSummary = `找到 ${results.length} 個符合條件的日期。先播報前五個：${spokenResults}`;
+    const spokenLead = results.length <= 5 ? '結果如下：' : '先播報前五個：';
+    const spokenSummary = `找到 ${results.length} 個符合條件的日期。${spokenLead}${spokenResults}`;
     area.innerHTML = `<p class="sr-only result-summary" tabindex="-1">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
     area.setAttribute('tabindex', '-1');
     area.removeAttribute('aria-label');
@@ -286,23 +288,10 @@
       if (!voice.pending) return;
       voice.status.setAttribute('aria-live', 'off');
       voice.status.textContent = '';
-      voice.retry.hidden = true;
       voice.succeeded = true;
       if (voice.target === 'lookup') fillLookupFromSpeech(voice.pending, voice.form);
       else fillGoodDayFromSpeech(voice.pending, true);
       voice.confirm.hidden = true;
-    };
-    const retryVoice = (voice) => {
-      voice.confirm.hidden = true;
-      voice.transcript.hidden = true;
-      voice.pending = '';
-      voice.status.textContent = '';
-      voice.succeeded = false;
-      voice.restarting = true;
-      invalidateRecognition();
-      // Let Safari release the previous audio session before creating a new
-      // recognizer. The old recognizer is no longer allowed to update the UI.
-      window.setTimeout(() => start(voice), 500);
     };
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
@@ -325,7 +314,6 @@
       recognition.onstart = () => {
         if (session !== voiceSession) return;
         voice.status.textContent = '';
-        voice.restarting = false;
       };
       recognition.onresult = (event) => {
         if (session !== voiceSession) return;
@@ -355,14 +343,12 @@
       recognition.onerror = (event) => {
         if (session !== voiceSession) return;
         clearRecognitionTimer();
-        if (event.error === 'aborted' && voice.restarting) return;
         if (voice.succeeded || voice.pending) return;
         const message = event.error === 'not-allowed' ? '沒有麥克風權限' : event.error === 'no-speech' ? '沒有辨識到語音' : event.error === 'network' ? '語音服務連線失敗' : '語音辨識失敗';
         voice.status.textContent = message;
         voice.confirm.hidden = true;
-        voice.retry.hidden = false;
       };
-      recognition.onnomatch = () => { if (session !== voiceSession || voice.succeeded || voice.pending) return; voice.status.textContent = '沒有辨識到文字'; voice.confirm.hidden = true; voice.retry.hidden = false; };
+      recognition.onnomatch = () => { if (session !== voiceSession || voice.succeeded || voice.pending) return; voice.status.textContent = '沒有辨識到文字'; voice.confirm.hidden = true; };
       recognition.onend = () => {
         if (session !== voiceSession) return;
         clearRecognitionTimer();
@@ -387,12 +373,10 @@
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
-      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), pending: '', succeeded: false };
       voice.startButton.addEventListener('click', () => start(voice));
-      voice.retry.hidden = false;
-      voice.retry.addEventListener('click', () => retryVoice(voice));
       voice.confirm.querySelector('.voice-confirm').addEventListener('click', () => submitVoice(voice));
       return voice;
     };
