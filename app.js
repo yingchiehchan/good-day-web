@@ -348,7 +348,7 @@
     const spokenResults = shown.slice(0, 5).map((day, index) => `第${index + 1}個，${calendar.format(day.date)}，干支日：${day.dayGanZhi}，相沖生肖：${day.clash}，老黃曆宜：${day.yi.join('、')}`).join('。');
     const spokenLead = results.length <= 5 ? '結果如下：' : '先播報前五個：';
     const spokenSummary = `找到 ${results.length} 個符合條件的日期。${spokenLead}${spokenResults}`;
-    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>干支日：</strong>${escapeHtml(day.dayGanZhi)}</p><p><strong>相沖生肖：</strong>${escapeHtml(day.clash)}</p><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p><p><strong>注意：</strong>請依實際需求與專業意見判斷。</p></article>`).join('');
+    area.innerHTML = `<p class="sr-only result-summary" tabindex="-1">${escapeHtml(spokenSummary)}</p><h3 class="result-heading" tabindex="-1">找到 ${results.length} 個符合條件的日期，以下顯示前 ${shown.length} 個</h3>` + shown.map((day) => `<article class="result-card" tabindex="0"><h3>${escapeHtml(calendar.format(day.date))}</h3><p><strong>干支日：</strong>${escapeHtml(day.dayGanZhi)}</p><p><strong>相沖生肖：</strong>${escapeHtml(day.clash)}</p><p><strong>老黃曆宜：</strong>${escapeHtml(day.yi.join('、'))}</p></article>`).join('');
     area.setAttribute('tabindex', '-1');
     area.removeAttribute('aria-label');
     window.setTimeout(() => area.querySelector('.result-summary')?.focus({ preventScroll: false }), 0);
