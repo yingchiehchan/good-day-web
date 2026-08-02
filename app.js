@@ -323,7 +323,19 @@
       window.setTimeout(() => start(voice), 500);
     };
     const start = (voice) => {
-      if (recognition) { recognition.stop(); return; }
+      if (recognition) {
+        const previousRecognition = recognition;
+        voice.restarting = true;
+        voice.startButton.textContent = '正在結束語音輸入';
+        voice.startButton.setAttribute('aria-label', '正在結束語音輸入');
+        voice.startButton.setAttribute('aria-pressed', 'true');
+        previousRecognition.onend = () => {
+          if (recognition === previousRecognition) recognition = null;
+          window.setTimeout(() => start(voice), 250);
+        };
+        try { previousRecognition.stop(); } catch (_) { try { previousRecognition.abort(); } catch (_) {} }
+        return;
+      }
       const session = ++voiceSession;
       activeVoice = voice;
       voice.pending = '';
@@ -344,6 +356,7 @@
         if (session !== voiceSession) return;
         voice.status.textContent = '';
         voice.restarting = false;
+        voice.recording = true;
       };
       recognition.onresult = (event) => {
         if (session !== voiceSession) return;
@@ -381,6 +394,7 @@
         if (session !== voiceSession) return;
         clearRecognitionTimer();
         recognition = null;
+        voice.recording = false;
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
@@ -403,7 +417,7 @@
       area.className = 'voice-area';
       area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button><button type="button" class="secondary-button voice-retry">錯，重新錄音</button></div>`;
       form.prepend(area);
-      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false };
+      const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), retry: area.querySelector('.voice-retry'), pending: '', restarting: false, succeeded: false, recording: false };
       voice.startButton.addEventListener('click', () => start(voice));
       voice.retry.hidden = false;
       voice.retry.addEventListener('click', () => retryVoice(voice));
