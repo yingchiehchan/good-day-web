@@ -604,13 +604,8 @@
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (voice.pending) {
-          const confirmButton = voice.confirm.querySelector('.voice-confirm');
-          const readingDelay = Math.max(5000, Math.min(12000, voice.pending.length * 260 + 3000));
-          window.setTimeout(() => {
-            confirmButton.focus({ preventScroll: false });
-          }, readingDelay);
-        } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
+        if (voice.pending) window.setTimeout(() => voice.transcript.focus({ preventScroll: false }), 0);
+        else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
       };
       try {
         recognition.start();
@@ -621,7 +616,7 @@
       const form = $(parent);
       const area = document.createElement('div');
       area.className = 'voice-area';
-      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button></div>`;
+      area.innerHTML = `<button type="button" class="secondary-button voice-start" aria-pressed="false">${label}</button><p class="voice-status" role="status" aria-live="polite"></p><p class="voice-transcript" tabindex="-1" hidden><strong>我聽到的是：</strong> <span></span></p><div class="voice-actions" hidden><button type="button" class="primary-button voice-confirm">對，開始查詢</button></div>`;
       if (mount === parent) form.prepend(area);
       else $(mount).append(area);
       const voice = { area, form, target, startButton: area.querySelector('.voice-start'), status: area.querySelector('.voice-status'), transcript: area.querySelector('.voice-transcript'), confirm: area.querySelector('.voice-actions'), pending: '', succeeded: false };
