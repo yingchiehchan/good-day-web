@@ -222,8 +222,8 @@
   }
 
   function initGuidedDateEntry() {
-    const toggle = $('guided-toggle'), panel = $('guided-date-entry'), close = $('guided-close'), classic = $('classic-date-entry'), stepArea = $('guided-step'), progress = $('guided-progress');
-    if (!toggle || !panel || !close || !classic || !stepArea || !progress) return;
+    const panel = $('guided-date-entry'), classic = $('classic-date-entry'), stepArea = $('guided-step'), progress = $('guided-progress');
+    if (!panel || !classic || !stepArea || !progress) return;
     const now = currentSolar();
     const branches = [['0', '子時'], ['2', '丑時'], ['4', '寅時'], ['6', '卯時'], ['8', '辰時'], ['10', '巳時'], ['12', '午時'], ['14', '未時'], ['16', '申時'], ['18', '酉時'], ['20', '戌時'], ['22', '亥時']];
     const state = { calendar: 'solar', era: 'western', year: now.year, month: now.month, day: now.day, leap: false, timeMode: 'clock', hour: 12, minute: 0, step: 0 };
@@ -267,7 +267,7 @@
       const previous = state.step > 0 && key !== 'summary' ? '<button class="back-button" type="button" data-guided-action="previous">上一步</button>' : '';
       const next = key !== 'summary' ? '<button class="primary-button" type="submit">下一步</button>' : '';
       stepArea.innerHTML = key === 'summary' ? content : `<form id="guided-current-form">${content}<div class="guided-actions">${previous}${next}</div></form>`;
-      window.setTimeout(() => $('guided-step-title')?.focus({ preventScroll: false }), 0);
+      if (!panel.closest('[hidden]')) window.setTimeout(() => $('guided-step-title')?.focus({ preventScroll: false }), 0);
     };
     const collect = () => {
       const key = steps()[state.step];
@@ -285,9 +285,6 @@
       if (key === 'time' && state.timeMode === 'clock') { state.hour = Number($('guided-hour').value); state.minute = Number($('guided-minute').value); }
       if (key === 'time' && state.timeMode === 'branch') { state.hour = Number($('guided-branch').value); state.minute = 0; }
     };
-    const closeGuided = () => { panel.hidden = true; classic.hidden = false; toggle.hidden = false; toggle.setAttribute('aria-expanded', 'false'); toggle.focus({ preventScroll: false }); };
-    toggle.addEventListener('click', () => { toggle.hidden = true; classic.hidden = true; panel.hidden = false; toggle.setAttribute('aria-expanded', 'true'); $('lookup-result').innerHTML = ''; state.step = 0; render(); });
-    close.addEventListener('click', closeGuided);
     stepArea.addEventListener('submit', (event) => { event.preventDefault(); collect(); state.step += 1; render(); });
     stepArea.addEventListener('click', (event) => {
       const previous = event.target.closest('[data-guided-action="previous"]');
@@ -306,6 +303,9 @@
       document.querySelector(`#${prefix}-form`).requestSubmit();
     });
     stepArea.addEventListener('focusin', (event) => { if (event.target.id === 'guided-year') event.target.select(); });
+    classic.hidden = true;
+    panel.hidden = false;
+    render();
   }
 
   function rangeDates(type) {
@@ -360,8 +360,8 @@
   }
 
   function initGuidedGoodDays() {
-    const toggle = $('guided-good-toggle'), panel = $('guided-good-entry'), close = $('guided-good-close'), classic = $('classic-good-entry'), stepArea = $('guided-good-step'), progress = $('guided-good-progress');
-    if (!toggle || !panel || !close || !classic || !stepArea || !progress) return;
+    const panel = $('guided-good-entry'), classic = $('classic-good-entry'), stepArea = $('guided-good-step'), progress = $('guided-good-progress');
+    if (!panel || !classic || !stepArea || !progress) return;
     const ranges = [['next7', '未來七天'], ['month', '本月'], ['nextMonth', '下個月'], ['twoYears', '未來兩年'], ['fiveYears', '未來五年'], ['custom', '自訂日期範圍']];
     const periods = [['any', '不限時段'], ['morning', '上午'], ['afternoon', '下午']];
     const zodiacNames = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
@@ -408,7 +408,7 @@
       const previous = state.step > 0 && key !== 'summary' ? '<button class="back-button" type="button" data-guided-good-action="previous">上一步</button>' : '';
       const next = key !== 'summary' ? '<button class="primary-button" type="submit">下一步</button>' : '';
       stepArea.innerHTML = key === 'summary' ? content : `<form id="guided-good-current-form">${content}<div class="guided-actions">${previous}${next}</div></form>`;
-      window.setTimeout(() => $('guided-good-step-title')?.focus({ preventScroll: false }), 0);
+      if (!panel.closest('[hidden]')) window.setTimeout(() => $('guided-good-step-title')?.focus({ preventScroll: false }), 0);
     };
     const collect = () => {
       const key = steps()[state.step];
@@ -437,9 +437,6 @@
       if (key === 'zodiac') state.zodiac = $('guided-good-zodiac').value;
       return true;
     };
-    const closeGuided = () => { panel.hidden = true; classic.hidden = false; toggle.hidden = false; toggle.setAttribute('aria-expanded', 'false'); toggle.focus({ preventScroll: false }); };
-    toggle.addEventListener('click', () => { toggle.hidden = true; classic.hidden = true; panel.hidden = false; toggle.setAttribute('aria-expanded', 'true'); $('good-day-result').innerHTML = ''; state.step = 0; render(); });
-    close.addEventListener('click', closeGuided);
     stepArea.addEventListener('submit', (event) => { event.preventDefault(); if (!collect()) return; state.step += 1; render(); });
     stepArea.addEventListener('focusin', (event) => { if (event.target.matches('#guided-good-start,#guided-good-end')) event.target.select(); });
     stepArea.addEventListener('click', (event) => {
@@ -456,6 +453,9 @@
       $('avoid-clash').checked = state.zodiacMode === 'avoid';
       $('good-day-form').requestSubmit();
     });
+    classic.hidden = true;
+    panel.hidden = false;
+    render();
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }
@@ -614,35 +614,58 @@
     });
   }
   function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
-  function setGoodDayMonthRange(year, month) {
-    if (!Number.isInteger(year) || !Number.isInteger(month) || year < 1900 || year > 2100 || month < 1 || month > 12) return false;
-    const endYear = month === 12 ? year + 1 : year;
-    const endMonth = month === 12 ? 1 : month + 1;
+  function setGoodDayDateRange(startDate, endDate) {
+    const start = new Date(startDate); start.setHours(12, 0, 0, 0);
+    const end = new Date(endDate); end.setHours(12, 0, 0, 0);
+    const tomorrow = new Date(); tomorrow.setHours(12, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1);
+    if (start < tomorrow) start.setTime(tomorrow.getTime());
+    if (end < start) return false;
+    const inputDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     $('range-type').value = 'custom';
     $('custom-range').hidden = false;
-    $('custom-start').value = `${year}-${String(month).padStart(2, '0')}-01`;
-    $('custom-end').value = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+    $('custom-start').value = inputDate(start);
+    $('custom-end').value = inputDate(end);
     return true;
+  }
+  function setGoodDayMonthRange(year, month) {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || year < 1900 || year > 2100 || month < 1 || month > 12) return false;
+    return setGoodDayDateRange(new Date(year, month - 1, 1, 12), new Date(year, month, 0, 12));
   }
   function fillGoodDayFromSpeech(text, autoSubmit = true) {
     document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = true; });
     $('period').value = 'any';
-    const absoluteMonthMatch = text.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月/);
-    if (absoluteMonthMatch) {
-      const inputYear = chineseNumber(absoluteMonthMatch[1]);
-      const month = chineseNumber(absoluteMonthMatch[2]);
-      const year = isRocSpokenYear(text, inputYear) ? inputYear + 1911 : inputYear;
-      setGoodDayMonthRange(year, month);
-    } else if (/今年|明年|後年/.test(text)) {
-      const monthMatch = text.match(/(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月/);
-      if (monthMatch) {
-        const names = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 };
-        const month = Number(monthMatch[1]) || names[monthMatch[1]];
-        const now = new Date();
-        const targetYear = text.includes('明年') ? now.getFullYear() + 1 : text.includes('後年') ? now.getFullYear() + 2 : now.getFullYear();
-        setGoodDayMonthRange(targetYear, month);
-      }
-    }
+    const now = new Date();
+    const yearMatch = text.match(/([0-9零〇一二三四五六七八九十百千]{2,6})\s*年/);
+    const spokenYear = yearMatch ? chineseNumber(yearMatch[1]) : null;
+    let targetYear = Number.isInteger(spokenYear) ? (isRocSpokenYear(text, spokenYear) ? spokenYear + 1911 : spokenYear) : null;
+    if (text.includes('今年')) targetYear = now.getFullYear();
+    if (text.includes('明年')) targetYear = now.getFullYear() + 1;
+    if (text.includes('後年')) targetYear = now.getFullYear() + 2;
+    const monthMatch = text.match(/([0-9零〇一二三四五六七八九十]{1,3})\s*月/);
+    const spokenMonth = monthMatch ? chineseNumber(monthMatch[1]) : null;
+    let rangeHandled = false;
+    let rangeExpired = false;
+    const setRange = (start, end) => { rangeHandled = true; if (!setGoodDayDateRange(start, end)) rangeExpired = true; };
+    if (/未來五年|未來5年/.test(text)) { $('range-type').value = 'fiveYears'; $('custom-range').hidden = true; rangeHandled = true; }
+    else if (/未來兩年|未來2年/.test(text)) { $('range-type').value = 'twoYears'; $('custom-range').hidden = true; rangeHandled = true; }
+    else if (/上半年|下半年/.test(text)) {
+      let year = targetYear;
+      if (!year) year = /上半年/.test(text) && now.getMonth() >= 6 ? now.getFullYear() + 1 : now.getFullYear();
+      if (/上半年/.test(text)) setRange(new Date(year, 0, 1, 12), new Date(year, 5, 30, 12));
+      else setRange(new Date(year, 6, 1, 12), new Date(year, 11, 31, 12));
+    } else if (/年底/.test(text)) {
+      let year = targetYear;
+      if (!year && Number.isInteger(spokenMonth)) year = now.getMonth() + 1 <= spokenMonth ? now.getFullYear() : now.getFullYear() + 1;
+      if (!year) year = now.getFullYear();
+      const start = /現在|即日起|今天/.test(text) ? new Date(now) : Number.isInteger(spokenMonth) ? new Date(year, spokenMonth - 1, 1, 12) : new Date(year, 0, 1, 12);
+      setRange(start, new Date(year, 11, 31, 12));
+    } else if (Number.isInteger(spokenMonth)) {
+      const year = targetYear || (now.getMonth() + 1 <= spokenMonth ? now.getFullYear() : now.getFullYear() + 1);
+      rangeHandled = true;
+      if (!setGoodDayMonthRange(year, spokenMonth)) rangeExpired = true;
+    } else if (/下個月|下月/.test(text)) { $('range-type').value = 'nextMonth'; $('custom-range').hidden = true; rangeHandled = true; }
+    else if (/本月|這個月/.test(text)) { $('range-type').value = 'month'; $('custom-range').hidden = true; rangeHandled = true; }
+    else if (/未來七天|未來7天|未來一週|未來一周/.test(text)) { $('range-type').value = 'next7'; $('custom-range').hidden = true; rangeHandled = true; }
     let foundEvent = Object.entries(voiceEventAliases).find(([, aliases]) => aliases.some((alias) => text.includes(alias)))?.[0];
     if (!foundEvent && text.includes('假期')) foundEvent = 'wedding';
     if (foundEvent) $('event-type').value = foundEvent;
@@ -656,6 +679,12 @@
     if (requestedWeekdays.length) document.querySelectorAll('#weekday-options input').forEach((input) => { input.checked = requestedWeekdays.includes(input.value); });
     if (text.includes('上午')) $('period').value = 'morning';
     if (text.includes('下午')) $('period').value = 'afternoon';
+    if (rangeHandled && rangeExpired) {
+      const area = $('good-day-result');
+      area.innerHTML = '<div class="empty" role="alert" tabindex="-1">這個日期範圍已經過去，請改說其他時間範圍。</div>';
+      window.setTimeout(() => area.querySelector('[role="alert"]')?.focus({ preventScroll: false }), 0);
+      return;
+    }
     if (autoSubmit) searchGoodDays();
   }
 
