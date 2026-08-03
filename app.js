@@ -222,8 +222,8 @@
   }
 
   function initGuidedDateEntry() {
-    const panel = $('guided-date-entry'), classic = $('classic-date-entry'), stepArea = $('guided-step'), progress = $('guided-progress');
-    if (!panel || !classic || !stepArea || !progress) return;
+    const toggle = $('guided-toggle'), panel = $('guided-date-entry'), close = $('guided-close'), classic = $('classic-date-entry'), stepArea = $('guided-step'), progress = $('guided-progress');
+    if (!toggle || !panel || !close || !classic || !stepArea || !progress) return;
     const now = currentSolar();
     const branches = [['0', '子時'], ['2', '丑時'], ['4', '寅時'], ['6', '卯時'], ['8', '辰時'], ['10', '巳時'], ['12', '午時'], ['14', '未時'], ['16', '申時'], ['18', '酉時'], ['20', '戌時'], ['22', '亥時']];
     const state = { calendar: 'solar', era: 'western', year: now.year, month: now.month, day: now.day, leap: false, timeMode: 'clock', hour: 12, minute: 0, step: 0 };
@@ -285,6 +285,21 @@
       if (key === 'time' && state.timeMode === 'clock') { state.hour = Number($('guided-hour').value); state.minute = Number($('guided-minute').value); }
       if (key === 'time' && state.timeMode === 'branch') { state.hour = Number($('guided-branch').value); state.minute = 0; }
     };
+    const closeGuided = (moveFocus = true) => {
+      panel.hidden = true;
+      toggle.hidden = false;
+      toggle.setAttribute('aria-expanded', 'false');
+      if (moveFocus) toggle.focus({ preventScroll: false });
+    };
+    toggle.addEventListener('click', () => {
+      toggle.hidden = true;
+      panel.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      $('lookup-result').innerHTML = '';
+      state.step = 0;
+      render();
+    });
+    close.addEventListener('click', () => closeGuided());
     stepArea.addEventListener('submit', (event) => { event.preventDefault(); collect(); state.step += 1; render(); });
     stepArea.addEventListener('click', (event) => {
       const previous = event.target.closest('[data-guided-action="previous"]');
@@ -300,12 +315,12 @@
       $(`${prefix}-roc`).checked = state.era === 'roc';
       if (state.calendar === 'lunar') $('lunar-leap').checked = state.leap;
       $(`${prefix}-time`).value = `${String(state.hour).padStart(2, '0')}:${String(state.minute).padStart(2, '0')}`;
+      closeGuided(false);
       document.querySelector(`#${prefix}-form`).requestSubmit();
     });
     stepArea.addEventListener('focusin', (event) => { if (event.target.id === 'guided-year') event.target.select(); });
     classic.hidden = true;
-    panel.hidden = false;
-    render();
+    panel.hidden = true;
   }
 
   function rangeDates(type) {
@@ -360,8 +375,8 @@
   }
 
   function initGuidedGoodDays() {
-    const panel = $('guided-good-entry'), classic = $('classic-good-entry'), stepArea = $('guided-good-step'), progress = $('guided-good-progress');
-    if (!panel || !classic || !stepArea || !progress) return;
+    const toggle = $('guided-good-toggle'), panel = $('guided-good-entry'), close = $('guided-good-close'), classic = $('classic-good-entry'), stepArea = $('guided-good-step'), progress = $('guided-good-progress');
+    if (!toggle || !panel || !close || !classic || !stepArea || !progress) return;
     const ranges = [['next7', '未來七天'], ['month', '本月'], ['nextMonth', '下個月'], ['twoYears', '未來兩年'], ['fiveYears', '未來五年'], ['custom', '自訂日期範圍']];
     const periods = [['any', '不限時段'], ['morning', '上午'], ['afternoon', '下午']];
     const zodiacNames = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
@@ -437,6 +452,21 @@
       if (key === 'zodiac') state.zodiac = $('guided-good-zodiac').value;
       return true;
     };
+    const closeGuided = (moveFocus = true) => {
+      panel.hidden = true;
+      toggle.hidden = false;
+      toggle.setAttribute('aria-expanded', 'false');
+      if (moveFocus) toggle.focus({ preventScroll: false });
+    };
+    toggle.addEventListener('click', () => {
+      toggle.hidden = true;
+      panel.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      $('good-day-result').innerHTML = '';
+      state.step = 0;
+      render();
+    });
+    close.addEventListener('click', () => closeGuided());
     stepArea.addEventListener('submit', (event) => { event.preventDefault(); if (!collect()) return; state.step += 1; render(); });
     stepArea.addEventListener('focusin', (event) => { if (event.target.matches('#guided-good-start,#guided-good-end')) event.target.select(); });
     stepArea.addEventListener('click', (event) => {
@@ -451,11 +481,11 @@
       $('period').value = state.period;
       $('zodiac').value = state.zodiacMode === 'avoid' ? state.zodiac : '';
       $('avoid-clash').checked = state.zodiacMode === 'avoid';
+      closeGuided(false);
       $('good-day-form').requestSubmit();
     });
     classic.hidden = true;
-    panel.hidden = false;
-    render();
+    panel.hidden = true;
   }
 
   function initGoodDays() { $('range-type').addEventListener('change', () => { $('custom-range').hidden = $('range-type').value !== 'custom'; }); $('good-day-form').addEventListener('submit', (event) => { event.preventDefault(); searchGoodDays(); }); }

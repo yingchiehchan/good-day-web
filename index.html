@@ -16,7 +16,7 @@
     <div>
       <p class="eyebrow">傳統曆法參考工具</p>
       <h1>好日子</h1>
-      <p class="app-version">版本 v2.50</p>
+      <p class="app-version">版本 v2.51</p>
     </div>
     <button id="install-button" class="secondary-button" hidden>加入主畫面</button>
   </header>
@@ -41,8 +41,9 @@
     <section id="lookup-panel" class="panel" aria-labelledby="lookup-title" tabindex="-1" hidden>
       <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="lookup-title" tabindex="-1">日期查詢</h2></div>
       <div id="lookup-voice-anchor"></div>
-      <section id="guided-date-entry" class="guided-entry" aria-labelledby="guided-title">
-        <div class="guided-heading"><h3 id="guided-title" tabindex="-1">逐項選擇日期</h3></div>
+      <button id="guided-toggle" class="guided-toggle" type="button" aria-expanded="false" aria-controls="guided-date-entry">手動選擇日期</button>
+      <section id="guided-date-entry" class="guided-entry" aria-labelledby="guided-title" hidden>
+        <div class="guided-heading"><h3 id="guided-title" tabindex="-1">逐項選擇日期</h3><button id="guided-close" class="back-button" type="button">收合手動選擇</button></div>
         <p id="guided-progress" class="guided-progress" aria-live="polite"></p>
         <div id="guided-step"></div>
       </section>
@@ -86,8 +87,9 @@
       <div class="panel-heading"><button class="back-button" data-go="home-panel">回首頁</button><h2 id="good-day-title" tabindex="-1">尋找好日子</h2></div>
       <p class="intro">選擇事項與條件，依老黃曆宜忌尋找日期。</p>
       <div id="good-day-voice-anchor"></div>
-      <section id="guided-good-entry" class="guided-entry" aria-labelledby="guided-good-title">
-        <div class="guided-heading"><h3 id="guided-good-title" tabindex="-1">逐項選擇擇日條件</h3></div>
+      <button id="guided-good-toggle" class="guided-toggle" type="button" aria-expanded="false" aria-controls="guided-good-entry">手動選擇擇日條件</button>
+      <section id="guided-good-entry" class="guided-entry" aria-labelledby="guided-good-title" hidden>
+        <div class="guided-heading"><h3 id="guided-good-title" tabindex="-1">逐項選擇擇日條件</h3><button id="guided-good-close" class="back-button" type="button">收合手動選擇</button></div>
         <p id="guided-good-progress" class="guided-progress" aria-live="polite"></p>
         <div id="guided-good-step" class="guided-step"></div>
       </section>
@@ -124,6 +126,6 @@
   <div id="navigation-announcement" class="sr-only" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
-  <script src="app.js?v=20260803-v250-formal-guided-ui" defer></script>
+  <script src="app.js?v=20260803-v251-collapsible-guided-ui" defer></script>
 </body>
 </html>
