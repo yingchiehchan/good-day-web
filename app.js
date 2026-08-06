@@ -232,7 +232,12 @@
     window.scrollTo(0, 0);
   }
 
-  function announce(message) { const area = $('lookup-result'); area.innerHTML = `<div class="empty" role="alert">${escapeHtml(message)}</div>`; }
+  function announce(message) {
+    const area = $('lookup-result');
+    area.innerHTML = `<div class="empty" role="alert" aria-atomic="true" tabindex="-1">${escapeHtml(message)}</div>`;
+    const alert = area.querySelector('[role="alert"]');
+    window.setTimeout(() => alert.focus({ preventScroll: false }), 0);
+  }
   function initLookup() {
     document.querySelectorAll('[data-calendar]').forEach((button) => button.addEventListener('click', () => {
       const lunar = button.dataset.calendar === 'lunar';
