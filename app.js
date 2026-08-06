@@ -142,6 +142,20 @@
     return lunar.getSolar();
   }
 
+  function lunarMonthName(month) {
+    return ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'][month] || String(month);
+  }
+
+  function lunarConversionErrorMessage(query) {
+    if (query.leap && typeof LunarYear !== 'undefined') {
+      const leapMonth = LunarYear.fromYear(query.year).getLeapMonth();
+      const yearName = query.roc ? `民國 ${query.inputYear} 年` : `${query.year} 年`;
+      if (leapMonth === 0) return `${yearName}沒有閏月。`;
+      if (leapMonth !== query.month) return `${yearName}的閏月是閏${lunarMonthName(leapMonth)}月，不是閏${lunarMonthName(query.month)}月。`;
+    }
+    return '無法轉換這個農曆日期，請檢查日期或閏月設定。';
+  }
+
   function makeDay(solar) {
     const lunar = solar.getLunar();
     const yi = value(lunar, ['getDayYi'], []).map(traditional);
@@ -226,7 +240,7 @@
       $('solar-form').hidden = lunar; $('lunar-form').hidden = !lunar; $('lookup-result').innerHTML = '';
     }));
     $('solar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('solar-time').value.split(':').map(Number); const yearInput = Number($('solar-year').value); const solarYear = $('solar-roc').checked ? yearInput + 1911 : yearInput; const solar = Solar.fromYmdHms(solarYear, Number($('solar-month').value), Number($('solar-day').value), hour, minute, 0); showLookupResult(renderDay(makeDay(solar))); });
-    $('lunar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('lunar-time').value.split(':').map(Number); const yearInput = Number($('lunar-year').value); const query = { year: $('lunar-roc').checked ? yearInput + 1911 : yearInput, month: Number($('lunar-month').value), day: Number($('lunar-day').value), hour, minute }; try { showLookupResult(renderDay(makeDay(solarFromLunar(query)))); } catch (error) { announce('無法轉換這個農曆日期，請檢查日期或閏月設定。'); } });
+    $('lunar-form').addEventListener('submit', (event) => { event.preventDefault(); if (!lunarLoaded()) return announce('農曆資料套件尚未載入，請確認網路連線後重新整理。'); const [hour, minute] = $('lunar-time').value.split(':').map(Number); const yearInput = Number($('lunar-year').value); const roc = $('lunar-roc').checked; const query = { year: roc ? yearInput + 1911 : yearInput, inputYear: yearInput, roc, month: Number($('lunar-month').value), day: Number($('lunar-day').value), hour, minute, leap: $('lunar-leap').checked }; try { showLookupResult(renderDay(makeDay(solarFromLunar(query)))); } catch (error) { announce(lunarConversionErrorMessage(query)); } });
   }
 
   function initGuidedDateEntry() {
