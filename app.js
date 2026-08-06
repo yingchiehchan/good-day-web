@@ -35,7 +35,7 @@
 
   function traditional(value) {
     if (value === undefined || value === null) return '資料不足';
-    let text = String(value);
+    let text = String(value).replaceAll('闰', '閏');
     const map = [['入宅', '入厝、入宅'], ['移徙', '搬家、移徙'], ['嫁娶', '結婚、嫁娶'], ['開市', '開市、開幕'], ['立券', '簽約、立券'], ['修造', '修繕、修造'], ['出行', '出門、出行'], ['求醫', '就醫、求醫'], ['求嗣', '求子、求嗣'], ['納采', '訂婚、納采'], ['雞', '雞'], ['龍', '龍']];
     map.forEach(([from, to]) => { text = text.split(from).join(to); });
     const simplifiedToTraditional = { 馬: '馬', 龙: '龍', 马: '馬', 鸡: '雞', 猪: '豬', 盖: '蓋', 竖: '豎', 车: '車', 农: '農', 历: '曆', 阳: '陽', 阴: '陰', 节: '節', 气: '氣', 岁: '歲', 时: '時', 间: '間', 点: '點', 国: '國', 问: '問', 听: '聽', 说: '說', 对: '對', 错: '錯', 这: '這', 个: '個', 数: '數', 据: '據', 无: '無', 资: '資', 料: '料', 开: '開', 询: '詢', 查: '查', 结: '結', 习: '習', 记: '記', 录: '錄', 识: '識', 语: '語', 读: '讀', 写: '寫', 转: '轉', 换: '換', 认: '認', 证: '證', 进: '進', 杀: '殺', 复: '復', 现: '現', 过: '過', 还: '還', 让: '讓', 发: '發', 诉: '訴', 选: '選', 择: '擇', 适: '適', 筛: '篩', 统: '統', 计: '計', 果: '果', 级: '級', 明: '明', 参: '參', 考: '考', 惊: '驚', 蛰: '蟄', 处: '處', 满: '滿', 种: '種' };
@@ -113,23 +113,31 @@
     return explicitRoc || (!explicitWestern && inputYear < 1000);
   }
 
+  function spokenDayNumber(text, lunar) {
+    let normalized = text;
+    if (lunar) normalized = normalized.replace(/^初/, '').replace(/^廿/, '二十').replace(/^卅/, '三十');
+    return chineseNumber(normalized);
+  }
+
   function parseSpokenDate(text) {
     const lunar = /農曆|農歷|阴历|陰曆|陰歷|老黃曆|老黃歷/.test(text);
-    const normalizedDateText = text.replace(/國曆|國歷|公曆|公歷|陽曆|陽歷|農曆|農歷|阴历|陰曆|陰歷|老黃曆|老黃歷/g, '');
-    const dateMatch = normalizedDateText.match(/([0-9零〇一二三四五六七八九十百]{2,6})\s*年\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*月\s*([0-9零〇一二三四五六七八九十百]{1,3})\s*[日號号]?/);
+    const normalizedDateText = text.replace(/國曆|國歷|公曆|公歷|陽曆|陽歷|農曆|農歷|阴历|陰曆|陰歷|老黃曆|老黃歷/g, '').replace(/\s+/g, '');
+    const dateMatch = normalizedDateText.match(/([0-9零〇一二三四五六七八九十百]{2,6})年?(閏|闰)?([0-9零〇一二三四五六七八九十百]{1,3})月([初廿卅0-9零〇一二三四五六七八九十百]{1,4})[日號号]?/);
     if (!dateMatch) return null;
     const inputYear = chineseNumber(dateMatch[1]);
-    const month = chineseNumber(dateMatch[2]);
-    const day = chineseNumber(dateMatch[3]);
+    const leap = lunar && Boolean(dateMatch[2]);
+    const month = chineseNumber(dateMatch[3]);
+    const day = spokenDayNumber(dateMatch[4], lunar);
     if (!inputYear || !month || !day) return null;
     const roc = isRocSpokenYear(text, inputYear);
     const year = roc ? inputYear + 1911 : inputYear;
     const [hour, minute] = parseTime(text);
-    return { year, inputYear, month, day, hour, minute, roc, lunar };
+    return { year, inputYear, month, day, hour, minute, roc, lunar, leap };
   }
 
   function solarFromLunar(query) {
-    const signedMonth = document.getElementById('lunar-leap').checked ? -Math.abs(query.month) : query.month;
+    const leap = query.leap === undefined ? document.getElementById('lunar-leap').checked : query.leap;
+    const signedMonth = leap ? -Math.abs(query.month) : query.month;
     const lunar = Lunar.fromYmdHms(query.year, signedMonth, query.day, query.hour, query.minute, 0);
     return lunar.getSolar();
   }
@@ -638,7 +646,7 @@
       if (document.hidden) releaseMicrophone();
     });
   }
-  function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
+  function fillLookupFromSpeech(text) { const query = parseSpokenDate(text); if (!query) { announce('請說完整日期，例如：國曆 2026 年 7 月 23 日午時。'); return; } document.querySelector(`[data-calendar="${query.lunar ? 'lunar' : 'solar'}"]`).click(); const prefix = query.lunar ? 'lunar' : 'solar'; $(`${prefix}-year`).value = query.inputYear; $(`${prefix}-month`).value = query.month; $(`${prefix}-day`).value = query.day; $(`${prefix}-time`).value = `${String(query.hour).padStart(2, '0')}:${String(query.minute).padStart(2, '0')}`; $(`${prefix}-roc`).checked = query.roc; if (query.lunar) $('lunar-leap').checked = query.leap; document.querySelector(query.lunar ? '#lunar-form' : '#solar-form').requestSubmit(); }
   function setGoodDayDateRange(startDate, endDate) {
     const start = new Date(startDate); start.setHours(12, 0, 0, 0);
     const end = new Date(endDate); end.setHours(12, 0, 0, 0);
