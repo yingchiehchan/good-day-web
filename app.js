@@ -32,6 +32,34 @@
     worship: ['祭祀', '拜拜']
   };
   const lunarLoaded = () => typeof window.Solar !== 'undefined' && typeof window.Lunar !== 'undefined';
+  let audioSessionResetTimer = null;
+
+  function setAudioSessionType(type) {
+    try {
+      if (!navigator.audioSession || !('type' in navigator.audioSession)) return false;
+      navigator.audioSession.type = type;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function beginMicrophoneAudioSession() {
+    if (audioSessionResetTimer) {
+      window.clearTimeout(audioSessionResetTimer);
+      audioSessionResetTimer = null;
+    }
+    setAudioSessionType('play-and-record');
+  }
+
+  function restorePlaybackAudioSession() {
+    if (audioSessionResetTimer) window.clearTimeout(audioSessionResetTimer);
+    if (!setAudioSessionType('playback')) return;
+    audioSessionResetTimer = window.setTimeout(() => {
+      setAudioSessionType('auto');
+      audioSessionResetTimer = null;
+    }, 0);
+  }
 
   function traditional(value) {
     if (value === undefined || value === null) return '資料不足';
@@ -527,12 +555,15 @@
       button.disabled = true;
       status.textContent = '';
       try {
+        beginMicrophoneAudioSession();
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((track) => track.stop());
+        restorePlaybackAudioSession();
         button.textContent = '麥克風已啟用';
         button.setAttribute('aria-label', '麥克風已啟用');
         status.textContent = '';
       } catch (_) {
+        restorePlaybackAudioSession();
         button.disabled = false;
         status.textContent = '麥克風未啟用';
       }
@@ -543,21 +574,26 @@
     if (!Speech) return;
     let recognition = null;
     let recognitionTimer = null;
+    let voiceAnnouncementTimer = null;
     let activeVoice = null;
     let voiceSession = 0;
     const clearRecognitionTimer = () => { if (recognitionTimer) { window.clearTimeout(recognitionTimer); recognitionTimer = null; } };
+    const clearVoiceAnnouncementTimer = () => { if (voiceAnnouncementTimer) { window.clearTimeout(voiceAnnouncementTimer); voiceAnnouncementTimer = null; } };
     const invalidateRecognition = () => {
       voiceSession += 1;
       clearRecognitionTimer();
+      clearVoiceAnnouncementTimer();
       const oldRecognition = recognition;
       recognition = null;
-      if (!oldRecognition) return;
-      oldRecognition.onstart = null;
-      oldRecognition.onresult = null;
-      oldRecognition.onerror = null;
-      oldRecognition.onnomatch = null;
-      oldRecognition.onend = null;
-      try { oldRecognition.abort(); } catch (_) { try { oldRecognition.stop(); } catch (_) {} }
+      if (oldRecognition) {
+        oldRecognition.onstart = null;
+        oldRecognition.onresult = null;
+        oldRecognition.onerror = null;
+        oldRecognition.onnomatch = null;
+        oldRecognition.onend = null;
+        try { oldRecognition.abort(); } catch (_) { try { oldRecognition.stop(); } catch (_) {} }
+      }
+      restorePlaybackAudioSession();
     };
     const submitVoice = (voice) => {
       if (!voice.pending) return;
@@ -571,6 +607,7 @@
     const start = (voice) => {
       if (recognition) { recognition.stop(); return; }
       const session = ++voiceSession;
+      clearVoiceAnnouncementTimer();
       activeVoice = voice;
       voice.pending = '';
       voice.succeeded = false;
@@ -581,6 +618,7 @@
       voice.startButton.textContent = '停止語音輸入';
       voice.startButton.setAttribute('aria-label', '停止語音輸入');
       voice.startButton.setAttribute('aria-pressed', 'true');
+      beginMicrophoneAudioSession();
       recognition = new Speech();
       recognition.lang = 'zh-TW';
       recognition.continuous = false;
@@ -604,10 +642,9 @@
         const confirmButton = voice.confirm.querySelector('.voice-confirm');
         voice.transcript.setAttribute('tabindex', '-1');
         voice.transcript.setAttribute('role', 'status');
-        voice.transcript.setAttribute('aria-live', 'assertive');
+        voice.transcript.setAttribute('aria-live', 'off');
         voice.transcript.setAttribute('aria-atomic', 'true');
         voice.transcript.setAttribute('aria-label', `我聽到的是：${text}`);
-        voice.transcript.setAttribute('role', 'alert');
         const completedRecognition = recognition;
         window.setTimeout(() => {
           if (session !== voiceSession || recognition !== completedRecognition) return;
@@ -628,16 +665,24 @@
         if (session !== voiceSession) return;
         clearRecognitionTimer();
         recognition = null;
+        restorePlaybackAudioSession();
         voice.startButton.textContent = '重新錄音';
         voice.startButton.setAttribute('aria-label', '重新錄音');
         voice.startButton.setAttribute('aria-pressed', 'false');
-        if (voice.pending) window.setTimeout(() => voice.transcript.focus({ preventScroll: false }), 0);
-        else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) voice.status.textContent = '語音輸入已結束';
+        voiceAnnouncementTimer = window.setTimeout(() => {
+          voiceAnnouncementTimer = null;
+          if (session !== voiceSession) return;
+          if (voice.pending) {
+            voice.transcript.focus({ preventScroll: false });
+          } else if (!voice.status.textContent.includes('失敗') && !voice.status.textContent.includes('沒有')) {
+            voice.status.textContent = '語音輸入已結束';
+          }
+        }, 300);
       };
       try {
         recognition.start();
         recognitionTimer = window.setTimeout(() => { if (recognition) recognition.stop(); }, 20000);
-      } catch (_) { clearRecognitionTimer(); voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
+      } catch (_) { clearRecognitionTimer(); restorePlaybackAudioSession(); voice.status.textContent = '語音輸入目前無法啟動，請重新按一次。'; recognition = null; }
     };
     const addButton = (parent, target, label, mount = parent) => {
       const form = $(parent);
